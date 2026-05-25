@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
 DB_PATH = BASE_DIR / "study_seat.db"
 TOKENS = {}
+STARTED_AT = datetime.now()
 
 
 def now_text():
@@ -302,6 +303,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def handle_api(self, method, path, query):
         try:
+            if path == "/api/health" and method == "GET":
+                return self.health()
             if path == "/api/login" and method == "POST":
                 return self.login()
             user = self.require_user()
@@ -332,6 +335,20 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "接口不存在"}, 404)
         except Exception as exc:
             self.send_json({"error": str(exc)}, 500)
+
+    def health(self):
+        with connect() as db:
+            db.execute("SELECT 1").fetchone()
+            table_count = db.execute("SELECT COUNT(*) c FROM sqlite_master WHERE type='table'").fetchone()["c"]
+        self.send_json(
+            {
+                "status": "ok",
+                "database": "ok",
+                "table_count": table_count,
+                "server_time": now_text(),
+                "started_at": STARTED_AT.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        )
 
     def public_user(self, user):
         return {

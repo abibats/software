@@ -38,6 +38,22 @@ async function request(path, options = {}) {
   return data;
 }
 
+async function testHealth() {
+  const status = $("healthStatus");
+  status.textContent = "测试中...";
+  status.className = "health-status";
+  try {
+    const data = await request("/api/health");
+    status.textContent = `服务正常 · 数据表 ${data.table_count}`;
+    status.classList.add("ok");
+    toast("连接测试通过");
+  } catch (err) {
+    status.textContent = "连接异常";
+    status.classList.add("error");
+    toast(err.message);
+  }
+}
+
 function can(permission) {
   return api.permissions.includes("*") || api.permissions.includes(permission);
 }
@@ -474,6 +490,7 @@ document.querySelectorAll("[data-user]").forEach((btn) => {
 
 $("logoutBtn").onclick = logout;
 $("refreshBtn").onclick = () => reload().then(() => toast("数据已刷新"));
+$("healthBtn").onclick = testHealth;
 
 window.createReservation = createReservation;
 window.checkin = checkin;
