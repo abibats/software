@@ -92,3 +92,17 @@ http://127.0.0.1:8000
 ## 说明
 
 本项目为了便于课程提交和演示，没有使用 Flask、Django、Vue、React 等第三方依赖。只要电脑安装了 Python，即可运行。
+
+## 智能助手 API 配置
+
+后端智能助手默认使用本地规则回答。部署环境配置 `MIMO_API_KEY` 后，会优先调用 MiMo OpenAI-compatible Chat Completions API；接口失败或未配置 key 时，会自动回退到本地规则。
+
+环境变量：
+
+```bash
+MIMO_API_KEY=你的 MiMo API Key
+MIMO_API_URL=https://api.mimo-v2.com/v1/chat/completions
+MIMO_MODEL=mimo-v2.5
+```
+
+不要把 API Key 写入代码或提交到 GitHub。华为云部署时建议配置为服务器环境变量，GitHub Actions 中建议配置为 Repository Secrets。

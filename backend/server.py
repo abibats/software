@@ -3,10 +3,13 @@ from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 import json
 import mimetypes
+import os
 import secrets
 import sqlite3
 from datetime import datetime, timedelta, date
 import re
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
@@ -197,6 +200,111 @@ def has_perm(user, perm):
         return False
     perms = json.loads(user["permissions"])
     return "*" in perms or perm in perms
+
+
+def assistant_api_configured():
+    return bool(os.environ.get("MIMO_API_KEY") or os.environ.get("AI_API_KEY"))
+
+
+def assistant_system_prompt():
+    return """
+你是自习座位预约系统的智能助手。你的职责是帮助用户查询座位、解释预约和签到规则、回答个人预约相关问题。
+要求：
+1. 只回答与自习室、座位、预约、签到、取消、违约和系统使用相关的问题。
+2. 优先基于系统提供的 JSON 上下文回答，不要编造不存在的教室、座位或预约。
+3. 用户问可用座位时，给出简短建议，并说明可到系统页面完成预约。
+4. 如果上下文不足，明确说明需要用户在页面中进一步筛选或查询。
+5. 使用简洁中文回答。
+""".strip()
+
+
+def assistant_context(db, user):
+    active_seats = rows(
+        db.execute(
+            """
+            SELECT s.code, s.near_window, s.has_power, s.quiet_zone,
+                   r.name room_name, r.building, r.open_time, r.close_time
+            FROM seats s JOIN rooms r ON s.room_id=r.id
+            WHERE s.status='active' AND r.status='active'
+            ORDER BY r.id, s.code
+            LIMIT 12
+            """
+        )
+    )
+    my_reservations = rows(
+        db.execute(
+            reservation_projection_sql()
+            + " WHERE rv.user_id=? AND rv.status IN ('reserved','checked_in') ORDER BY rv.start_time LIMIT 8",
+            (user["id"],),
+        )
+    )
+    stats = {
+        "active_rooms": db.execute("SELECT COUNT(*) c FROM rooms WHERE status='active'").fetchone()["c"],
+        "active_seats": db.execute("SELECT COUNT(*) c FROM seats WHERE status='active'").fetchone()["c"],
+    }
+    parameters = rows(db.execute("SELECT key,value,label FROM parameters ORDER BY key"))
+    return {
+        "current_date": today_text(),
+        "current_user": {
+            "username": user["username"],
+            "display_name": user["display_name"],
+            "department": user["department"],
+            "role_name": user["role_name"],
+        },
+        "stats": stats,
+        "sample_active_seats": active_seats,
+        "my_active_reservations": my_reservations,
+        "parameters": parameters,
+        "rules": [
+            "预约开始时间必须是未来整点。",
+            "单次预约时长受 max_hours 参数限制。",
+            "到达自习室后输入教室动态编码完成签到。",
+            "预约开始后 15 分钟仍未签到会自动取消并记录违约。",
+        ],
+    }
+
+
+def call_assistant_api(db, user, text):
+    api_key = os.environ.get("MIMO_API_KEY") or os.environ.get("AI_API_KEY")
+    if not api_key:
+        return None
+    api_url = os.environ.get("MIMO_API_URL", "https://api.mimo-v2.com/v1/chat/completions")
+    model = os.environ.get("MIMO_MODEL", "mimo-v2.5")
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": assistant_system_prompt()},
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "question": text,
+                        "system_context": assistant_context(db, user),
+                    },
+                    ensure_ascii=False,
+                ),
+            },
+        ],
+        "temperature": 0.2,
+        "max_completion_tokens": 600,
+    }
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = Request(
+        api_url,
+        data=data,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "api-key": api_key,
+        },
+    )
+    try:
+        with urlopen(req, timeout=20) as response:
+            result = json.loads(response.read().decode("utf-8"))
+        return result["choices"][0]["message"]["content"].strip()
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, KeyError, IndexError):
+        return None
 
 
 def reservation_projection_sql():
@@ -639,6 +747,9 @@ class Handler(BaseHTTPRequestHandler):
         with connect() as db:
             if not text:
                 return self.send_json({"reply": "你可以问我：今晚还有空座吗、帮我找靠窗有插座的座位、我今天预约了哪里。"})
+            api_reply = call_assistant_api(db, user, text)
+            if api_reply:
+                return self.send_json({"reply": api_reply, "source": "api"})
             if any(word in text for word in ["帮助", "怎么用", "你能做什么", "功能"]):
                 return self.send_json(
                     {
