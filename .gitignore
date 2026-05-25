@@ -1,4 +1,5 @@
 backend/study_seat.db
+backend/config.json
 backend/__pycache__/
 *.pyc
 .DS_Store

@@ -162,6 +162,35 @@ nav button.active, nav button:hover {
   margin-bottom: 20px;
 }
 .topbar h2 { margin: 0; font-size: 28px; }
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.health-status {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--muted);
+  background: white;
+  font-size: 13px;
+  font-weight: 700;
+}
+.health-status.ok {
+  border-color: rgba(15, 118, 110, .35);
+  color: var(--ok);
+  background: #eef8f7;
+}
+.health-status.error {
+  border-color: rgba(194, 65, 12, .35);
+  color: var(--danger);
+  background: #fff7ed;
+}
 .grid {
   display: grid;
   gap: 16px;
@@ -296,6 +325,7 @@ th { color: #475467; background: #f8fafc; }
   .sidebar { min-height: auto; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .topbar { align-items: flex-start; gap: 12px; flex-direction: column; }
+  .topbar-actions { justify-content: flex-start; }
   .checkin-actions {
     min-width: 280px;
     grid-template-columns: 1fr;

@@ -1,9 +1,11 @@
 import json
+import os
 import tempfile
 import threading
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -48,11 +50,35 @@ class ApiClient:
         return status, payload
 
 
+class FakeApiResponse:
+    status = 200
+
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+
 class StudySeatApiTest(unittest.TestCase):
     def setUp(self):
+        self.original_env = {
+            key: os.environ.get(key)
+            for key in ("MIMO_API_KEY", "MIMO_API_URL", "MIMO_MODEL", "AI_API_KEY")
+        }
+        for key in self.original_env:
+            os.environ.pop(key, None)
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.original_db_path = server.DB_PATH
+        self.original_config_path = server.CONFIG_PATH
         server.DB_PATH = Path(self.tmp.name) / "test_study_seat.db"
+        server.CONFIG_PATH = Path(self.tmp.name) / "config.json"
         server.TOKENS.clear()
         server.init_db()
 
@@ -67,8 +93,14 @@ class StudySeatApiTest(unittest.TestCase):
         self.httpd.server_close()
         self.thread.join(timeout=5)
         server.DB_PATH = self.original_db_path
+        server.CONFIG_PATH = self.original_config_path
         server.TOKENS.clear()
         self.tmp.cleanup()
+        for key, value in self.original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
     def future_hour(self):
         return (datetime.now() + timedelta(days=1)).replace(
@@ -197,6 +229,65 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(status, 200)
         max_hours = next(p for p in payload["parameters"] if p["key"] == "max_hours")
         self.assertEqual(max_hours["value"], "3")
+
+    def test_assistant_falls_back_without_api_key(self):
+        self.client.login("student1")
+        status, payload = self.client.request(
+            "POST", "/api/assistant", {"message": "怎么签到"}
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("reply", payload)
+        self.assertNotEqual(payload.get("source"), "api")
+
+    def test_assistant_uses_mimo_api_when_configured(self):
+        self.client.login("student1")
+        os.environ["MIMO_API_KEY"] = "test-key"
+        os.environ["MIMO_API_URL"] = "https://example.test/chat/completions"
+        os.environ["MIMO_MODEL"] = "mimo-v2.5"
+
+        fake_payload = {
+            "choices": [
+                {"message": {"content": "可以，我已经根据当前座位数据为你筛选。"}}
+            ]
+        }
+        with patch("server.urlopen", return_value=FakeApiResponse(fake_payload)) as mocked_urlopen:
+            status, payload = self.client.request(
+                "POST", "/api/assistant", {"message": "帮我找一个靠窗座位"}
+            )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["source"], "api")
+        self.assertEqual(payload["reply"], "可以，我已经根据当前座位数据为你筛选。")
+        self.assertTrue(mocked_urlopen.called)
+
+    def test_assistant_uses_config_file_when_present(self):
+        self.client.login("student1")
+        server.CONFIG_PATH.write_text(
+            json.dumps(
+                {
+                    "mimo_api_key": "config-key",
+                    "mimo_api_url": "https://example.test/from-config",
+                    "mimo_model": "mimo-v2.5",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        fake_payload = {
+            "choices": [
+                {"message": {"content": "这是从配置文件启用的智能助手回复。"}}
+            ]
+        }
+        with patch("server.urlopen", return_value=FakeApiResponse(fake_payload)) as mocked_urlopen:
+            status, payload = self.client.request(
+                "POST", "/api/assistant", {"message": "今晚还有空座吗"}
+            )
+
+        request = mocked_urlopen.call_args.args[0]
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["source"], "api")
+        self.assertEqual(payload["reply"], "这是从配置文件启用的智能助手回复。")
+        self.assertEqual(request.full_url, "https://example.test/from-config")
 
 
 if __name__ == "__main__":
