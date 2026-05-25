@@ -95,14 +95,22 @@ http://127.0.0.1:8000
 
 ## 智能助手 API 配置
 
-后端智能助手默认使用本地规则回答。部署环境配置 `MIMO_API_KEY` 后，会优先调用 MiMo OpenAI-compatible Chat Completions API；接口失败或未配置 key 时，会自动回退到本地规则。
+后端智能助手默认使用本地规则回答。配置 `backend/config.json` 后，会优先调用 MiMo OpenAI-compatible Chat Completions API；接口失败或未配置 key 时，会自动回退到本地规则。
 
-环境变量：
+复制模板：
 
 ```bash
-MIMO_API_KEY=你的 MiMo API Key
-MIMO_API_URL=https://api.mimo-v2.com/v1/chat/completions
-MIMO_MODEL=mimo-v2.5
+cp backend/config.example.json backend/config.json
 ```
 
-不要把 API Key 写入代码或提交到 GitHub。华为云部署时建议配置为服务器环境变量，GitHub Actions 中建议配置为 Repository Secrets。
+然后编辑 `backend/config.json`：
+
+```json
+{
+  "mimo_api_key": "你的 MiMo API Key",
+  "mimo_api_url": "https://api.mimo-v2.com/v1/chat/completions",
+  "mimo_model": "mimo-v2.5"
+}
+```
+
+`backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `MIMO_API_KEY`、`MIMO_API_URL`、`MIMO_MODEL` 环境变量。

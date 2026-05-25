@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
 DB_PATH = BASE_DIR / "study_seat.db"
+CONFIG_PATH = BASE_DIR / "config.json"
 TOKENS = {}
 STARTED_AT = datetime.now()
 
@@ -202,8 +203,25 @@ def has_perm(user, perm):
     return "*" in perms or perm in perms
 
 
+def load_config():
+    if not CONFIG_PATH.exists():
+        return {}
+    try:
+        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def config_value(config, key, env_key=None, default=None):
+    if key in config and config[key] not in (None, ""):
+        return config[key]
+    env_key = env_key or key.upper()
+    return os.environ.get(env_key, default)
+
+
 def assistant_api_configured():
-    return bool(os.environ.get("MIMO_API_KEY") or os.environ.get("AI_API_KEY"))
+    config = load_config()
+    return bool(config_value(config, "mimo_api_key", "MIMO_API_KEY") or os.environ.get("AI_API_KEY"))
 
 
 def assistant_system_prompt():
@@ -265,11 +283,17 @@ def assistant_context(db, user):
 
 
 def call_assistant_api(db, user, text):
-    api_key = os.environ.get("MIMO_API_KEY") or os.environ.get("AI_API_KEY")
+    config = load_config()
+    api_key = config_value(config, "mimo_api_key", "MIMO_API_KEY") or os.environ.get("AI_API_KEY")
     if not api_key:
         return None
-    api_url = os.environ.get("MIMO_API_URL", "https://api.mimo-v2.com/v1/chat/completions")
-    model = os.environ.get("MIMO_MODEL", "mimo-v2.5")
+    api_url = config_value(
+        config,
+        "mimo_api_url",
+        "MIMO_API_URL",
+        "https://api.mimo-v2.com/v1/chat/completions",
+    )
+    model = config_value(config, "mimo_model", "MIMO_MODEL", "mimo-v2.5")
     payload = {
         "model": model,
         "messages": [

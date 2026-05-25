@@ -76,7 +76,9 @@ class StudySeatApiTest(unittest.TestCase):
             os.environ.pop(key, None)
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.original_db_path = server.DB_PATH
+        self.original_config_path = server.CONFIG_PATH
         server.DB_PATH = Path(self.tmp.name) / "test_study_seat.db"
+        server.CONFIG_PATH = Path(self.tmp.name) / "config.json"
         server.TOKENS.clear()
         server.init_db()
 
@@ -91,6 +93,7 @@ class StudySeatApiTest(unittest.TestCase):
         self.httpd.server_close()
         self.thread.join(timeout=5)
         server.DB_PATH = self.original_db_path
+        server.CONFIG_PATH = self.original_config_path
         server.TOKENS.clear()
         self.tmp.cleanup()
         for key, value in self.original_env.items():
@@ -256,6 +259,35 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(payload["source"], "api")
         self.assertEqual(payload["reply"], "可以，我已经根据当前座位数据为你筛选。")
         self.assertTrue(mocked_urlopen.called)
+
+    def test_assistant_uses_config_file_when_present(self):
+        self.client.login("student1")
+        server.CONFIG_PATH.write_text(
+            json.dumps(
+                {
+                    "mimo_api_key": "config-key",
+                    "mimo_api_url": "https://example.test/from-config",
+                    "mimo_model": "mimo-v2.5",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        fake_payload = {
+            "choices": [
+                {"message": {"content": "这是从配置文件启用的智能助手回复。"}}
+            ]
+        }
+        with patch("server.urlopen", return_value=FakeApiResponse(fake_payload)) as mocked_urlopen:
+            status, payload = self.client.request(
+                "POST", "/api/assistant", {"message": "今晚还有空座吗"}
+            )
+
+        request = mocked_urlopen.call_args.args[0]
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["source"], "api")
+        self.assertEqual(payload["reply"], "这是从配置文件启用的智能助手回复。")
+        self.assertEqual(request.full_url, "https://example.test/from-config")
 
 
 if __name__ == "__main__":
