@@ -290,6 +290,14 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(payload["reply"], "这是从配置文件启用的智能助手回复。")
         self.assertEqual(request.full_url, "https://example.test/from-config")
 
+    def test_config_file_allows_utf8_bom(self):
+        server.CONFIG_PATH.write_text(
+            json.dumps({"mimo_api_key": "config-key"}),
+            encoding="utf-8-sig",
+        )
+
+        self.assertTrue(server.assistant_api_configured())
+
     def test_assistant_supports_anthropic_token_plan_endpoint(self):
         self.client.login("student1")
         server.CONFIG_PATH.write_text(

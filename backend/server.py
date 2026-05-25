@@ -244,13 +244,14 @@ def assistant_system_prompt():
 要求：
 1. 只回答与自习室、座位、预约、签到、取消、违约和系统使用相关的问题。
 2. 优先基于系统提供的 JSON 上下文回答，不要编造不存在的教室、座位或预约。
-3. 用户问可用座位时，给出简短建议，并说明可到系统页面完成预约。
-4. 如果上下文不足，明确说明需要用户在页面中进一步筛选或查询。
-5. 使用简洁中文回答。
+3. 直接回答用户问题，不要写系统概览、功能介绍或无关流程。
+4. 用户问可用座位时，只基于 available_seats 列表回答；如果列表为空，就说明暂未找到符合条件的座位。
+5. 回答尽量控制在 120 字以内；如列座位，最多列 5 个。
+6. 不要输出 JSON，不要暴露内部字段名。
 """.strip()
 
 
-def assistant_context(db, user):
+def assistant_context(db, user, text=""):
     active_seats = rows(
         db.execute(
             """
@@ -263,6 +264,41 @@ def assistant_context(db, user):
             """
         )
     )
+    seat_filters = extract_assistant_filters(text)
+    time_window = extract_time_window(text)
+    available_seats = []
+    if any(word in text for word in ["空座", "座位", "找座", "推荐", "学习", "自习", "电脑", "充电", "靠窗", "安静", "今晚", "今天", "明天"]):
+        sql = """
+            SELECT s.id, s.code, s.near_window, s.has_power, s.quiet_zone,
+                   r.name room_name, r.building, r.department, r.open_time, r.close_time
+            FROM seats s JOIN rooms r ON s.room_id=r.id
+            WHERE s.status='active' AND r.status='active'
+        """
+        params = []
+        for key, value in seat_filters.items():
+            sql += f" AND s.{key}=?"
+            params.append(value)
+        if user["department"]:
+            sql += " AND (r.department='全校' OR r.department=?)"
+            params.append(user["department"])
+        sql += " ORDER BY r.id, s.code LIMIT 24"
+        for seat in rows(db.execute(sql, params)):
+            if time_window and not is_seat_available(db, seat["id"], time_window[0], time_window[1]):
+                continue
+            available_seats.append(
+                {
+                    "room_name": seat["room_name"],
+                    "building": seat["building"],
+                    "code": seat["code"],
+                    "near_window": bool(seat["near_window"]),
+                    "has_power": bool(seat["has_power"]),
+                    "quiet_zone": bool(seat["quiet_zone"]),
+                    "open_time": seat["open_time"],
+                    "close_time": seat["close_time"],
+                }
+            )
+            if len(available_seats) >= 8:
+                break
     my_reservations = rows(
         db.execute(
             reservation_projection_sql()
@@ -285,6 +321,9 @@ def assistant_context(db, user):
         },
         "stats": stats,
         "sample_active_seats": active_seats,
+        "seat_filters": seat_filters,
+        "time_window": time_window,
+        "available_seats": available_seats,
         "my_active_reservations": my_reservations,
         "parameters": parameters,
         "rules": [
@@ -322,13 +361,10 @@ def call_openai_assistant_api(db, user, text, api_url, api_key, model):
             {"role": "system", "content": assistant_system_prompt()},
             {
                 "role": "user",
-                "content": json.dumps(
-                    {
-                        "question": text,
-                        "system_context": assistant_context(db, user),
-                    },
-                    ensure_ascii=False,
-                ),
+                "content": "用户问题："
+                + text
+                + "\n系统上下文(JSON)："
+                + json.dumps(assistant_context(db, user, text), ensure_ascii=False),
             },
         ],
         "temperature": 0.2,
@@ -360,13 +396,10 @@ def call_anthropic_assistant_api(db, user, text, api_url, api_key, model):
         "messages": [
             {
                 "role": "user",
-                "content": json.dumps(
-                    {
-                        "question": text,
-                        "system_context": assistant_context(db, user),
-                    },
-                    ensure_ascii=False,
-                ),
+                "content": "用户问题："
+                + text
+                + "\n系统上下文(JSON)："
+                + json.dumps(assistant_context(db, user, text), ensure_ascii=False),
             }
         ],
         "max_tokens": 600,
