@@ -1,5 +1,5 @@
 {
-  "mimo_api_key": "replace-with-your-mimo-api-key",
+  "mimo_api_key": "tp-ct8iftj7phovixpkg2vw44dy4b5qpne12ekkz7l75l7i56np",
   "mimo_api_url": "https://api.mimo-v2.com/v1/chat/completions",
   "mimo_model": "mimo-v2.5"
 }
