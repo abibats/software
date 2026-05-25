@@ -267,6 +267,7 @@ class StudySeatApiTest(unittest.TestCase):
                 {
                     "mimo_api_key": "config-key",
                     "mimo_api_url": "https://example.test/from-config",
+                    "mimo_api_format": "openai",
                     "mimo_model": "mimo-v2.5",
                 }
             ),
@@ -288,6 +289,42 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(payload["source"], "api")
         self.assertEqual(payload["reply"], "这是从配置文件启用的智能助手回复。")
         self.assertEqual(request.full_url, "https://example.test/from-config")
+
+    def test_assistant_supports_anthropic_token_plan_endpoint(self):
+        self.client.login("student1")
+        server.CONFIG_PATH.write_text(
+            json.dumps(
+                {
+                    "mimo_api_key": "config-key",
+                    "mimo_api_url": "https://token-plan-cn.xiaomimimo.com/anthropic",
+                    "mimo_api_format": "anthropic",
+                    "mimo_model": "mimo-v2.5",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        fake_payload = {
+            "content": [
+                {"type": "text", "text": "Anthropic 兼容接口已经返回。"}
+            ]
+        }
+        with patch("server.urlopen", return_value=FakeApiResponse(fake_payload)) as mocked_urlopen:
+            status, payload = self.client.request(
+                "POST", "/api/assistant", {"message": "帮我找安静座位"}
+            )
+
+        request = mocked_urlopen.call_args.args[0]
+        body = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["source"], "api")
+        self.assertEqual(payload["reply"], "Anthropic 兼容接口已经返回。")
+        self.assertEqual(
+            request.full_url,
+            "https://token-plan-cn.xiaomimimo.com/anthropic/v1/messages",
+        )
+        self.assertEqual(body["max_tokens"], 600)
+        self.assertIn("system", body)
 
 
 if __name__ == "__main__":

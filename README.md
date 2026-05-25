@@ -108,9 +108,10 @@ cp backend/config.example.json backend/config.json
 ```json
 {
   "mimo_api_key": "你的 MiMo API Key",
-  "mimo_api_url": "https://api.mimo-v2.com/v1/chat/completions",
+  "mimo_api_url": "https://token-plan-cn.xiaomimimo.com/anthropic",
+  "mimo_api_format": "anthropic",
   "mimo_model": "mimo-v2.5"
 }
 ```
 
-`backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `MIMO_API_KEY`、`MIMO_API_URL`、`MIMO_MODEL` 环境变量。
+`backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `MIMO_API_KEY`、`MIMO_API_URL`、`MIMO_API_FORMAT`、`MIMO_MODEL` 环境变量。

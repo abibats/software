@@ -207,7 +207,7 @@ def load_config():
     if not CONFIG_PATH.exists():
         return {}
     try:
-        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        return json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return {}
 
@@ -217,6 +217,20 @@ def config_value(config, key, env_key=None, default=None):
         return config[key]
     env_key = env_key or key.upper()
     return os.environ.get(env_key, default)
+
+
+def assistant_api_format(config, api_url):
+    configured = config_value(config, "mimo_api_format", "MIMO_API_FORMAT")
+    if configured:
+        return configured.lower()
+    return "anthropic" if "/anthropic" in api_url else "openai"
+
+
+def assistant_api_endpoint(api_url, api_format):
+    api_url = api_url.rstrip("/")
+    if api_format == "anthropic" and not api_url.endswith("/v1/messages"):
+        return f"{api_url}/v1/messages"
+    return api_url
 
 
 def assistant_api_configured():
@@ -294,6 +308,14 @@ def call_assistant_api(db, user, text):
         "https://api.mimo-v2.com/v1/chat/completions",
     )
     model = config_value(config, "mimo_model", "MIMO_MODEL", "mimo-v2.5")
+    api_format = assistant_api_format(config, api_url)
+    api_url = assistant_api_endpoint(api_url, api_format)
+    if api_format == "anthropic":
+        return call_anthropic_assistant_api(db, user, text, api_url, api_key, model)
+    return call_openai_assistant_api(db, user, text, api_url, api_key, model)
+
+
+def call_openai_assistant_api(db, user, text, api_url, api_key, model):
     payload = {
         "model": model,
         "messages": [
@@ -328,6 +350,56 @@ def call_assistant_api(db, user, text):
             result = json.loads(response.read().decode("utf-8"))
         return result["choices"][0]["message"]["content"].strip()
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, KeyError, IndexError):
+        return None
+
+
+def call_anthropic_assistant_api(db, user, text, api_url, api_key, model):
+    payload = {
+        "model": model,
+        "system": assistant_system_prompt(),
+        "messages": [
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "question": text,
+                        "system_context": assistant_context(db, user),
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+        ],
+        "max_tokens": 600,
+        "temperature": 0.2,
+    }
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = Request(
+        api_url,
+        data=data,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "anthropic-version": "2023-06-01",
+            "Authorization": f"Bearer {api_key}",
+            "x-api-key": api_key,
+            "api-key": api_key,
+        },
+    )
+    try:
+        with urlopen(req, timeout=20) as response:
+            result = json.loads(response.read().decode("utf-8"))
+        content = result.get("content", [])
+        if isinstance(content, list):
+            text_parts = [
+                item.get("text", "")
+                for item in content
+                if isinstance(item, dict) and item.get("type") == "text"
+            ]
+            return "\n".join(part for part in text_parts if part).strip() or None
+        if isinstance(content, str):
+            return content.strip()
+        return None
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError):
         return None
 
 
