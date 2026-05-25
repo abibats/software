@@ -333,7 +333,14 @@ function renderAssistant() {
       </div>
     </div>
   `;
-  $("sendChatBtn").onclick = () => askAssistant($("chatInput").value);
+  const chatInput = $("chatInput");
+  $("sendChatBtn").onclick = () => askAssistant(chatInput.value);
+  chatInput.onkeydown = (event) => {
+    if (event.key === "Enter" && !event.isComposing) {
+      event.preventDefault();
+      askAssistant(chatInput.value);
+    }
+  };
 }
 
 function quickAsk(text) {
