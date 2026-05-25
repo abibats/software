@@ -13,6 +13,7 @@ const state = {
   users: [],
   params: [],
   stats: {},
+  chatMessages: [{ role: "bot", text: "你好，我可以帮你查空座、找靠窗/有插座座位，也可以查询你今天定了哪里。" }],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -108,6 +109,7 @@ function logout() {
   api.token = "";
   api.user = null;
   api.permissions = [];
+  state.chatMessages = [{ role: "bot", text: "你好，我可以帮你查空座、找靠窗/有插座座位，也可以查询你今天定了哪里。" }];
   $("loginView").classList.remove("hidden");
   $("mainView").classList.add("hidden");
 }
@@ -314,11 +316,10 @@ async function cancelReservation(id) {
 }
 
 function renderAssistant() {
+  const messagesHtml = state.chatMessages.map((m) => `<div class="msg ${m.role}">${m.text}</div>`).join("");
   $("assistantPage").innerHTML = `
     <div class="panel">
-      <div class="chat-box" id="chatBox">
-        <div class="msg bot">你好，我可以帮你查空座、找靠窗/有插座座位，也可以查询你今天定了哪里。</div>
-      </div>
+      <div class="chat-box" id="chatBox">${messagesHtml}</div>
       <div class="chat-input">
         <input id="chatInput" placeholder="例如：今天晚上还有空座吗？">
         <button class="primary" id="sendChatBtn">发送</button>
@@ -341,6 +342,7 @@ function renderAssistant() {
       askAssistant(chatInput.value);
     }
   };
+  $("chatBox").scrollTop = $("chatBox").scrollHeight;
 }
 
 function quickAsk(text) {
@@ -352,12 +354,14 @@ async function askAssistant(text) {
   if (!text.trim()) return;
   const box = $("chatBox");
   box.innerHTML += `<div class="msg user">${text}</div>`;
+  state.chatMessages.push({ role: "user", text });
   $("chatInput").value = "";
   const data = await request("/api/assistant", {
     method: "POST",
     body: JSON.stringify({ message: text }),
   });
   box.innerHTML += `<div class="msg bot">${data.reply}</div>`;
+  state.chatMessages.push({ role: "bot", text: data.reply });
   box.scrollTop = box.scrollHeight;
 }
 
