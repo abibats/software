@@ -245,60 +245,59 @@ def assistant_system_prompt():
 1. 只回答与自习室、座位、预约、签到、取消、违约和系统使用相关的问题。
 2. 优先基于系统提供的 JSON 上下文回答，不要编造不存在的教室、座位或预约。
 3. 直接回答用户问题，不要写系统概览、功能介绍或无关流程。
-4. 用户问可用座位时，只基于 available_seats 列表回答；如果列表为空，就说明暂未找到符合条件的座位。
-5. 回答尽量控制在 120 字以内；如列座位，最多列 5 个。
+4. 用户问可用座位时，必须只基于 query_result 回答。query_result.total 是实际查到的可用座位总数，query_result.seats 是部分可用座位列表（可能不全，但 total 是准确总数）。先说"共找到 X 个可用座位"，再列出 seats 中的座位。如果 total 为 0，说明暂未找到符合条件的座位。
+5. 回答尽量控制在 150 字以内；如列座位，最多列 5 个。
 6. 不要输出 JSON，不要暴露内部字段名。
 """.strip()
 
 
-def assistant_context(db, user, text=""):
-    active_seats = rows(
-        db.execute(
-            """
-            SELECT s.code, s.near_window, s.has_power, s.quiet_zone,
-                   r.name room_name, r.building, r.open_time, r.close_time
-            FROM seats s JOIN rooms r ON s.room_id=r.id
-            WHERE s.status='active' AND r.status='active'
-            ORDER BY r.id, s.code
-            LIMIT 12
-            """
-        )
-    )
+def build_available_seats(db, user, text):
     seat_filters = extract_assistant_filters(text)
     time_window = extract_time_window(text)
-    available_seats = []
-    if any(word in text for word in ["空座", "座位", "找座", "推荐", "学习", "自习", "电脑", "充电", "靠窗", "安静", "今晚", "今天", "明天"]):
-        sql = """
-            SELECT s.id, s.code, s.near_window, s.has_power, s.quiet_zone,
-                   r.name room_name, r.building, r.department, r.open_time, r.close_time
-            FROM seats s JOIN rooms r ON s.room_id=r.id
-            WHERE s.status='active' AND r.status='active'
-        """
-        params = []
-        for key, value in seat_filters.items():
-            sql += f" AND s.{key}=?"
-            params.append(value)
-        if user["department"]:
-            sql += " AND (r.department='全校' OR r.department=?)"
-            params.append(user["department"])
-        sql += " ORDER BY r.id, s.code LIMIT 24"
-        for seat in rows(db.execute(sql, params)):
-            if time_window and not is_seat_available(db, seat["id"], time_window[0], time_window[1]):
-                continue
-            available_seats.append(
-                {
-                    "room_name": seat["room_name"],
-                    "building": seat["building"],
-                    "code": seat["code"],
-                    "near_window": bool(seat["near_window"]),
-                    "has_power": bool(seat["has_power"]),
-                    "quiet_zone": bool(seat["quiet_zone"]),
-                    "open_time": seat["open_time"],
-                    "close_time": seat["close_time"],
-                }
-            )
-            if len(available_seats) >= 8:
-                break
+    sql = """
+        SELECT s.id, s.code, s.near_window, s.has_power, s.quiet_zone,
+               r.name room_name, r.building, r.department, r.open_time, r.close_time
+        FROM seats s JOIN rooms r ON s.room_id=r.id
+        WHERE s.status='active' AND r.status='active'
+    """
+    params = []
+    for key, value in seat_filters.items():
+        sql += f" AND s.{key}=?"
+        params.append(value)
+    if user["department"]:
+        sql += " AND (r.department='全校' OR r.department=?)"
+        params.append(user["department"])
+    sql += " ORDER BY r.id, s.code"
+    all_seats = rows(db.execute(sql, params))
+    available = []
+    for seat in all_seats:
+        if time_window and not is_seat_available(db, seat["id"], time_window[0], time_window[1]):
+            continue
+        available.append(
+            {
+                "room_name": seat["room_name"],
+                "building": seat["building"],
+                "code": seat["code"],
+                "near_window": bool(seat["near_window"]),
+                "has_power": bool(seat["has_power"]),
+                "quiet_zone": bool(seat["quiet_zone"]),
+                "open_time": seat["open_time"],
+                "close_time": seat["close_time"],
+            }
+        )
+    return {
+        "total": len(available),
+        "filters": seat_filters,
+        "time_window": time_window,
+        "seats": available[:8],
+    }
+
+
+def assistant_context(db, user, text=""):
+    is_seat_query = any(
+        word in text
+        for word in ["空座", "座位", "找座", "推荐", "学习", "自习", "电脑", "充电", "靠窗", "安静", "今晚", "今天", "明天"]
+    )
     my_reservations = rows(
         db.execute(
             reservation_projection_sql()
@@ -306,12 +305,7 @@ def assistant_context(db, user, text=""):
             (user["id"],),
         )
     )
-    stats = {
-        "active_rooms": db.execute("SELECT COUNT(*) c FROM rooms WHERE status='active'").fetchone()["c"],
-        "active_seats": db.execute("SELECT COUNT(*) c FROM seats WHERE status='active'").fetchone()["c"],
-    }
-    parameters = rows(db.execute("SELECT key,value,label FROM parameters ORDER BY key"))
-    return {
+    result = {
         "current_date": today_text(),
         "current_user": {
             "username": user["username"],
@@ -319,20 +313,19 @@ def assistant_context(db, user, text=""):
             "department": user["department"],
             "role_name": user["role_name"],
         },
-        "stats": stats,
-        "sample_active_seats": active_seats,
-        "seat_filters": seat_filters,
-        "time_window": time_window,
-        "available_seats": available_seats,
+        "active_rooms": db.execute("SELECT COUNT(*) c FROM rooms WHERE status='active'").fetchone()["c"],
+        "active_seats": db.execute("SELECT COUNT(*) c FROM seats WHERE status='active'").fetchone()["c"],
         "my_active_reservations": my_reservations,
-        "parameters": parameters,
         "rules": [
             "预约开始时间必须是未来整点。",
-            "单次预约时长受 max_hours 参数限制。",
+            "单次预约时长受 max_hours 参数限制（默认4小时）。",
             "到达自习室后输入教室动态编码完成签到。",
             "预约开始后 15 分钟仍未签到会自动取消并记录违约。",
         ],
     }
+    if is_seat_query:
+        result["query_result"] = build_available_seats(db, user, text)
+    return result
 
 
 def call_assistant_api(db, user, text):
