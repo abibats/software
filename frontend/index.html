@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自习座位预约系统</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <section class="login-view" id="loginView">
+      <div class="login-panel">
+        <div>
+          <p class="eyebrow">Study Seat Reservation</p>
+          <h1>自习座位预约系统</h1>
+          <p class="sub">Web 学生端 + Web 管理端 + Python 后端 API + SQLite 数据库</p>
+        </div>
+        <form id="loginForm" class="login-form">
+          <label>账号<input id="username" value="student1" autocomplete="username"></label>
+          <label>密码<input id="password" value="123456" type="password" autocomplete="current-password"></label>
+          <button class="primary" type="submit">登录系统</button>
+        </form>
+        <div class="demo-users">
+          <button data-user="student1">学生 student1</button>
+          <button data-user="manager">教室管理员 manager</button>
+          <button data-user="admin">系统管理员 admin</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="shell hidden" id="mainView">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="logo">座</span>
+          <div>
+            <strong>座位预约</strong>
+            <small id="userMeta"></small>
+          </div>
+        </div>
+        <nav id="nav"></nav>
+        <button class="ghost logout" id="logoutBtn">退出登录</button>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="pageEyebrow">Dashboard</p>
+            <h2 id="pageTitle">工作台</h2>
+          </div>
+          <button class="primary" id="refreshBtn">刷新数据</button>
+        </header>
+
+        <section id="dashboardPage" class="page"></section>
+        <section id="studentPage" class="page hidden"></section>
+        <section id="assistantPage" class="page hidden"></section>
+        <section id="adminPage" class="page hidden"></section>
+        <section id="recordsPage" class="page hidden"></section>
+      </main>
+    </section>
+
+    <div id="toast"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
