@@ -334,7 +334,6 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(body["max_tokens"], 600)
         self.assertIn("system", body)
 
-
     def test_cancel_reservation(self):
         self.client.login("student1")
         seat_id = self.active_seat_id()
