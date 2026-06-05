@@ -3,8 +3,8 @@
 ## Review #1: PR #2 - Assistant API Integration
 
 - **日期：** 2026-05-25
-- **作者：** 成员 F
-- **Reviewer：** 成员 A、成员 D
+- **作者：** 郑周锐
+- **Reviewer：** 梁志杰、诸丁玮
 - **分支：** `assistant-api-integration` → `main`
 
 ### Review 内容
@@ -26,9 +26,9 @@
 ## Review #2: PR #4 - 用户故事与迭代计划
 
 - **日期：** 2026-06-05
-- **作者：** 成员 A
-- **Reviewer：** 成员 B、成员 E
-- **分支：** `feature/member-a-project-management` → `main`
+- **作者：** 梁志杰
+- **Reviewer：** 马龙、尚俊霖
+- **分支：** `feature/project-management` → `main`
 
 ### Review 内容
 
@@ -38,7 +38,7 @@
 
 1. **用户故事覆盖度：** 4 个 Epic 覆盖了系统的所有核心功能
 2. **验收标准完整性：** 每个用户故事都有可测试的验收标准
-3. **分工映射清晰：** Feature 与 Epic 对应关系表明确了每位成员的责任范围
+3. **分工映射清晰：** Feature 与 Epic 对应关系表明确了各成员的责任范围
 
 ### Review 结论
 
@@ -49,9 +49,9 @@
 ## Review #3: PR #5 - 学生端前端页面说明
 
 - **日期：** 2026-06-05
-- **作者：** 成员 B
-- **Reviewer：** 成员 A、成员 D
-- **分支：** `feature/member-b-student-frontend` → `main`
+- **作者：** 马龙
+- **Reviewer：** 梁志杰、诸丁玮
+- **分支：** `feature/student-frontend` → `main`
 
 ### Review 内容
 
@@ -72,9 +72,9 @@
 ## Review #4: PR #7 - 预约业务逻辑说明
 
 - **日期：** 2026-06-05
-- **作者：** 成员 D
-- **Reviewer：** 成员 E、成员 B
-- **分支：** `feature/member-d-reservation-backend` → `main`
+- **作者：** 诸丁玮
+- **Reviewer：** 尚俊霖、马龙
+- **分支：** `feature/reservation-backend` → `main`
 
 ### Review 内容
 
@@ -95,9 +95,9 @@
 ## Review #5: PR #8 - 数据库与权限体系设计
 
 - **日期：** 2026-06-05
-- **作者：** 成员 E
-- **Reviewer：** 成员 A、成员 D
-- **分支：** `feature/member-e-auth-backend` → `main`
+- **作者：** 尚俊霖
+- **Reviewer：** 梁志杰、诸丁玮
+- **分支：** `feature/auth-backend` → `main`
 
 ### Review 内容
 
@@ -118,9 +118,9 @@
 ## Review #6: PR #9 - 测试用例与 CI/CD 说明
 
 - **日期：** 2026-06-05
-- **作者：** 成员 F
-- **Reviewer：** 成员 A、成员 D
-- **分支：** `feature/member-f-testing-devops` → `main`
+- **作者：** 郑周锐
+- **Reviewer：** 梁志杰、诸丁玮
+- **分支：** `feature/testing-devops` → `main`
 
 ### Review 内容
 

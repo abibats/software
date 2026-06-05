@@ -2,26 +2,25 @@
 
 ## 分支命名规范
 
-每位成员使用固定的 feature 分支：
+每位成员使用独立的 feature 分支进行开发：
 
-| 成员 | 分支名 | 职责范围 |
-|------|--------|----------|
-| A | `feature/member-a-project-management` | 项目管理、用户故事、迭代计划 |
-| B | `feature/member-b-student-frontend` | 学生端前端开发 |
-| C | `feature/member-c-admin-frontend` | 管理端前端开发 |
-| D | `feature/member-d-reservation-backend` | 后端预约业务 |
-| E | `feature/member-e-auth-backend` | 后端权限与数据库 |
-| F | `feature/member-f-testing-devops` | 测试、DevOps、智能助手 |
+| 分支名 | 职责范围 |
+|--------|----------|
+| `feature/student-frontend` | 学生端前端 |
+| `feature/admin-frontend` | 管理端前端 |
+| `feature/reservation-backend` | 后端预约业务 |
+| `feature/auth-backend` | 后端权限与数据库 |
+| `feature/testing-devops` | 测试、DevOps、智能助手 |
 
 ## 开发流程
 
 ```
-1. git checkout feature/member-x-xxx        # 切到自己的分支
+1. git checkout feature/xxx                 # 切到自己的分支
 2. git pull origin main                      # 拉取最新 main
 3. # 编写代码...
 4. git add <具体文件>                         # 暂存变更
 5. git commit -m "feat: 简短描述"             # 原子提交
-6. git push origin feature/member-x-xxx      # 推送分支
+6. git push origin feature/xxx               # 推送分支
 7. 在 GitHub 上创建 Pull Request → main      # 创建 PR
 8. 等待至少一位其他成员 Review                # 代码审查
 9. Review 通过后 Merge PR                    # 合并到 main
@@ -56,15 +55,13 @@ test(backend): add reservation overlap test
 ### PR 标题格式
 
 ```
-<type>(<scope>): 简短描述 - 成员X
+<type>(<scope>): 简短描述
 ```
 
 ### PR 内容模板
 
 ```markdown
-## 成员 X：职责简述
-
-### 变更说明
+## 变更说明
 - 具体改了什么
 
 ### 对应的用户故事
@@ -91,10 +88,10 @@ test(backend): add reservation overlap test
 每次开始新工作前，先同步 main 的最新代码：
 
 ```bash
-git checkout feature/member-x-xxx
+git checkout feature/xxx
 git merge main    # 或 git rebase main
 # 解决冲突（如有）
-git push origin feature/member-x-xxx
+git push origin feature/xxx
 ```
 
 ## 禁止事项
