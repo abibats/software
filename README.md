@@ -7,12 +7,12 @@
 - 数据库：SQLite
 - 功能：学生预约、签到、管理端、RBAC、系统参数、预约记录、违约记录、统计、规则智能助手
 
-## 运行方式
+## 本地运行
 
 1. 打开终端进入项目目录：
 
 ```powershell
-cd C:\Users\User\Desktop\自习座位预约系统\backend
+cd backend
 ```
 
 2. 启动后端：
@@ -23,7 +23,7 @@ python server.py
 
 3. 浏览器打开：
 
-```text
+```
 http://127.0.0.1:8000
 ```
 
@@ -34,6 +34,84 @@ http://127.0.0.1:8000
 | 学生 | student1 | 123456 |
 | 教室管理员 | manager | 123456 |
 | 系统管理员 | admin | 123456 |
+
+## 华为云部署
+
+### 前提条件
+
+- 华为云 ECS（CentOS / Ubuntu 均可）
+- 安全组放行 80 端口
+- 已安装 Python 3.10+
+
+### 一键部署
+
+```bash
+# 1. 上传 deploy 目录到服务器
+scp -r deploy/ root@<ECS公网IP>:/opt/study-seat/
+
+# 2. 安装 systemd 服务
+sudo cp deploy/study-seat.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable study-seat
+
+# 3. 配置 Nginx 反向代理（可选）
+sudo cp deploy/nginx.conf /etc/nginx/conf.d/study-seat.conf
+sudo systemctl reload nginx
+
+# 4. 执行部署
+cd /opt/study-seat
+bash deploy/deploy.sh
+```
+
+### 部署脚本说明
+
+`deploy/deploy.sh` 会自动完成以下步骤：
+
+1. 拉取最新代码（git pull）
+2. 运行全部自动化测试（29个用例）
+3. 测试通过后重启 systemd 服务
+4. 健康检查确认服务正常
+
+### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `APP_DIR` | `/opt/study-seat` | 应用目录 |
+| `BRANCH` | `main` | Git 分支 |
+| `MIMO_API_KEY` | 无 | 智能助手 API Key（可选） |
+
+## CI/CD 流水线
+
+使用 GitHub Actions，每次 push 和 PR 自动执行：
+
+1. **代码检查** — flake8 检查代码质量
+2. **构建验证** — Python 语法检查 + 前端资源验证
+3. **自动化测试** — 29 个测试用例全覆盖
+4. **自动部署** — main 分支推送后自动部署到华为云
+5. **冒烟测试** — 部署后自动验证线上接口
+
+## 运行测试
+
+```bash
+cd backend
+python -m unittest discover -s . -p "test_*.py" -v
+```
+
+测试覆盖：
+
+| 测试项 | 数量 |
+|--------|------|
+| 登录与鉴权 | 4 |
+| RBAC 权限控制 | 5 |
+| 预约业务（创建/冲突/取消/边界） | 6 |
+| 签到（正确码/错误码） | 2 |
+| 座位管理（CRUD/筛选） | 3 |
+| 用户与角色管理 | 3 |
+| 系统参数 | 2 |
+| 统计接口 | 1 |
+| 智能助手 | 4 |
+| 健康检查 | 1 |
+| **合计** | **29** |
 
 ## 主要功能
 
@@ -77,21 +155,31 @@ http://127.0.0.1:8000
 自习座位预约系统
 ├─ backend
 │  ├─ server.py          后端服务、API、SQLite 建表和种子数据
+│  ├─ test_server.py     自动化测试（29个用例）
+│  ├─ smoke_test.py      线上冒烟测试
 │  └─ study_seat.db      首次运行后自动生成
 ├─ frontend
 │  ├─ index.html         前端页面结构
 │  ├─ style.css          页面样式
 │  └─ app.js             前端业务逻辑和 API 调用
+├─ deploy
+│  ├─ deploy.sh          华为云部署脚本
+│  ├─ study-seat.service systemd 服务配置
+│  └─ nginx.conf         Nginx 反向代理配置
 ├─ docs
-│  ├─ 分工说明.md
-│  ├─ 功能说明.md
-│  └─ 接口说明.md
+│  ├─ 用户故事.md         用户故事与验收标准
+│  ├─ 分工说明.md         6人分工
+│  ├─ 功能说明.md         功能描述
+│  ├─ 接口说明.md         API 文档
+│  ├─ 代码Review记录.md   Review 记录
+│  ├─ 例会记录.md         例会记录
+│  ├─ 测试用例说明.md     测试用例文档
+│  └─ screenshots/       CI/CD 截图
+├─ .github/workflows/
+│  └─ ci.yml             GitHub Actions CI/CD 流水线
+├─ CONTRIBUTING.md       协作规范
 └─ README.md
 ```
-
-## 说明
-
-本项目为了便于课程提交和演示，没有使用 Flask、Django、Vue、React 等第三方依赖。只要电脑安装了 Python，即可运行。
 
 ## 智能助手 API 配置
 

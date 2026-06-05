@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  backend-tests:
-    name: Backend unit and API tests
-    runs-on: windows-latest
+  lint:
+    name: Code quality check
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -19,17 +19,88 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run backend tests
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Lint backend
+        run: flake8 backend/server.py backend/test_server.py backend/smoke_test.py --max-line-length=120 --statistics
+
+  build:
+    name: Build and verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify Python syntax
+        run: python -m py_compile backend/server.py && python -m py_compile backend/test_server.py
+
+      - name: Verify frontend assets exist
+        run: |
+          test -f frontend/index.html
+          test -f frontend/style.css
+          test -f frontend/app.js
+
+      - name: Verify server starts
+        run: |
+          cd backend
+          python -c "
+          import server
+          print('Server module loaded successfully')
+          print(f'DB path: {server.DB_PATH}')
+          print(f'Frontend dir: {server.FRONTEND_DIR}')
+          "
+
+  test:
+    name: Automated tests
+    runs-on: windows-latest
+    needs: [lint, build]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run all tests
         run: python -m unittest discover -s backend -p "test_*.py" -v
 
-  smoke-test:
-    name: Deployed smoke test
+  deploy:
+    name: Deploy to Huawei Cloud
     runs-on: ubuntu-latest
-    needs: backend-tests
-    env:
-      SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
-      SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
-      SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git pull origin main
+            sudo systemctl restart study-seat
+
+  smoke-test:
+    name: Post-deploy smoke test
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Checkout
@@ -41,9 +112,8 @@ jobs:
           python-version: "3.12"
 
       - name: Run smoke test
-        if: ${{ env.SMOKE_BASE_URL != '' }}
+        env:
+          SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
+          SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         run: python backend/smoke_test.py
-
-      - name: Skip smoke test
-        if: ${{ env.SMOKE_BASE_URL == '' }}
-        run: echo "SMOKE_BASE_URL secret is not configured; skipping deployed smoke test."
