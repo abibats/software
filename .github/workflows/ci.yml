@@ -128,10 +128,6 @@ jobs:
         if: steps.check.outputs.configured == 'true'
         uses: actions/checkout@v4
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Set up Python
         if: steps.check.outputs.configured == 'true'
         uses: actions/setup-python@v5
