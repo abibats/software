@@ -335,5 +335,262 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertIn("system", body)
 
 
+    def test_cancel_reservation(self):
+        self.client.login("student1")
+        seat_id = self.active_seat_id()
+        start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M")
+
+        status, _ = self.client.request(
+            "POST",
+            "/api/reservations",
+            {"seat_id": seat_id, "start_time": start_time, "hours": 1},
+        )
+        self.assertEqual(status, 200)
+
+        status, payload = self.client.request("GET", "/api/reservations")
+        self.assertEqual(status, 200)
+        reservation = payload["reservations"][0]
+
+        status, payload = self.client.request(
+            "PUT", "/api/reservations", {"id": reservation["id"]}
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("message", payload)
+
+        status, payload = self.client.request("GET", "/api/reservations")
+        cancelled = next(
+            r for r in payload["reservations"] if r["id"] == reservation["id"]
+        )
+        self.assertEqual(cancelled["status"], "cancelled")
+
+    def test_cancel_other_user_reservation_forbidden(self):
+        self.client.login("student1")
+        seat_id = self.active_seat_id()
+        start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M")
+
+        self.client.request(
+            "POST",
+            "/api/reservations",
+            {"seat_id": seat_id, "start_time": start_time, "hours": 1},
+        )
+        status, payload = self.client.request("GET", "/api/reservations")
+        reservation_id = payload["reservations"][0]["id"]
+
+        other = ApiClient(self.client.base_url)
+        other.login("student2")
+        status, payload = other.request(
+            "PUT", "/api/reservations", {"id": reservation_id}
+        )
+        self.assertEqual(status, 403)
+
+    def test_seat_crud(self):
+        manager = ApiClient(self.client.base_url)
+        manager.login("manager")
+
+        status, payload = manager.request(
+            "POST",
+            "/api/seats",
+            {
+                "room_id": 1,
+                "code": "T-99",
+                "near_window": True,
+                "has_power": True,
+                "quiet_zone": False,
+            },
+        )
+        self.assertEqual(status, 200)
+
+        status, payload = manager.request(
+            "GET", "/api/seats", query={"keyword": "T-99"}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(len(payload["seats"]), 1)
+        seat = payload["seats"][0]
+        self.assertEqual(seat["code"], "T-99")
+        self.assertEqual(seat["near_window"], 1)
+        self.assertEqual(seat["has_power"], 1)
+
+        status, payload = manager.request(
+            "PUT",
+            "/api/seats",
+            {"id": seat["id"], "room_id": 1, "code": "T-99-MOD", "quiet_zone": True},
+        )
+        self.assertEqual(status, 200)
+
+        status, payload = manager.request(
+            "GET", "/api/seats", query={"keyword": "T-99"}
+        )
+        self.assertEqual(payload["seats"][0]["code"], "T-99-MOD")
+
+    def test_student_cannot_manage_seats(self):
+        self.client.login("student1")
+        status, payload = self.client.request(
+            "POST",
+            "/api/seats",
+            {"room_id": 1, "code": "HACK-01"},
+        )
+        self.assertEqual(status, 403)
+
+    def test_user_role_management(self):
+        admin = ApiClient(self.client.base_url)
+        admin.login("admin")
+
+        status, payload = admin.request("GET", "/api/users")
+        self.assertEqual(status, 200)
+        self.assertGreater(len(payload["users"]), 0)
+
+        student = next(
+            u for u in payload["users"] if u["username"] == "student2"
+        )
+        manager_role = next(
+            r for r in [1, 2, 3] if r == 2
+        )
+
+        status, payload = admin.request(
+            "PUT", "/api/users", {"id": student["id"], "role_id": manager_role}
+        )
+        self.assertEqual(status, 200)
+
+    def test_student_cannot_manage_users(self):
+        self.client.login("student1")
+        status, payload = self.client.request("GET", "/api/users")
+        self.assertEqual(status, 403)
+
+    def test_violations_visible_to_admin_only(self):
+        self.client.login("student1")
+        status, payload = self.client.request("GET", "/api/violations")
+        self.assertEqual(status, 403)
+
+        admin = ApiClient(self.client.base_url)
+        admin.login("admin")
+        status, payload = admin.request("GET", "/api/violations")
+        self.assertEqual(status, 200)
+        self.assertIn("violations", payload)
+
+    def test_stats_scope_by_role(self):
+        self.client.login("student1")
+        status, payload = self.client.request("GET", "/api/stats")
+        self.assertEqual(status, 200)
+        stats = payload["stats"]
+        self.assertIn("my_reserved", stats)
+        self.assertIn("my_checked_in", stats)
+        self.assertNotIn("violations", stats)
+
+        admin = ApiClient(self.client.base_url)
+        admin.login("admin")
+        status, payload = admin.request("GET", "/api/stats")
+        self.assertEqual(status, 200)
+        stats = payload["stats"]
+        self.assertIn("rooms", stats)
+        self.assertIn("seats", stats)
+        self.assertIn("reserved", stats)
+        self.assertIn("violations", stats)
+
+    def test_health_endpoint(self):
+        status, payload = self.client.request("GET", "/api/health", token=False)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["database"], "ok")
+        self.assertGreater(payload["table_count"], 0)
+
+    def test_me_endpoint(self):
+        self.client.login("student1")
+        status, payload = self.client.request("GET", "/api/me")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["user"]["username"], "student1")
+        self.assertIn("permissions", payload)
+        self.assertIn("student:use", payload["permissions"])
+
+    def test_reservation_rejects_past_time(self):
+        self.client.login("student1")
+        seat_id = self.active_seat_id()
+        past_time = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+
+        status, payload = self.client.request(
+            "POST",
+            "/api/reservations",
+            {"seat_id": seat_id, "start_time": past_time, "hours": 1},
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("error", payload)
+
+    def test_reservation_rejects_invalid_duration(self):
+        self.client.login("student1")
+        seat_id = self.active_seat_id()
+        start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M")
+
+        status, payload = self.client.request(
+            "POST",
+            "/api/reservations",
+            {"seat_id": seat_id, "start_time": start_time, "hours": 0},
+        )
+        self.assertEqual(status, 400)
+
+        status, payload = self.client.request(
+            "POST",
+            "/api/reservations",
+            {"seat_id": seat_id, "start_time": start_time, "hours": 10},
+        )
+        self.assertEqual(status, 400)
+
+    def test_checkin_rejects_wrong_code(self):
+        self.client.login("student1")
+        seat_id = self.active_seat_id()
+        start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M")
+
+        self.client.request(
+            "POST",
+            "/api/reservations",
+            {"seat_id": seat_id, "start_time": start_time, "hours": 1},
+        )
+        status, payload = self.client.request("GET", "/api/reservations")
+        reservation = payload["reservations"][0]
+
+        status, payload = self.client.request(
+            "POST",
+            "/api/checkin",
+            {"reservation_id": reservation["id"], "code": "WRONG-CODE"},
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("error", payload)
+
+    def test_student_cannot_update_parameters(self):
+        self.client.login("student1")
+        status, payload = self.client.request(
+            "PUT", "/api/parameters", {"key": "max_hours", "value": "99"}
+        )
+        self.assertEqual(status, 403)
+
+    def test_rooms_list(self):
+        self.client.login("student1")
+        status, payload = self.client.request("GET", "/api/rooms")
+        self.assertEqual(status, 200)
+        self.assertGreater(len(payload["rooms"]), 0)
+
+    def test_seat_filter_by_attributes(self):
+        self.client.login("student1")
+        status, payload = self.client.request(
+            "GET", "/api/seats", query={"near_window": "1", "has_power": "1"}
+        )
+        self.assertEqual(status, 200)
+        for seat in payload["seats"]:
+            self.assertEqual(seat["near_window"], 1)
+            self.assertEqual(seat["has_power"], 1)
+
+    def test_roles_list(self):
+        admin = ApiClient(self.client.base_url)
+        admin.login("admin")
+        status, payload = admin.request("GET", "/api/roles")
+        self.assertEqual(status, 200)
+        self.assertGreaterEqual(len(payload["roles"]), 3)
+
+    def test_reservation_not_found_on_cancel(self):
+        self.client.login("student1")
+        status, payload = self.client.request(
+            "PUT", "/api/reservations", {"id": 99999}
+        )
+        self.assertEqual(status, 404)
+
+
 if __name__ == "__main__":
     unittest.main()
