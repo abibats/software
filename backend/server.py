@@ -445,8 +445,12 @@ def reservation_projection_sql():
 
 
 def auto_expire():
-    limit = datetime.now() - timedelta(minutes=15)
     with connect() as db:
+        cancel_minutes = int(
+            db.execute("SELECT value FROM parameters WHERE key='auto_cancel_minutes'")
+            .fetchone()["value"]
+        )
+        limit = datetime.now() - timedelta(minutes=cancel_minutes)
         expired = rows(
             db.execute(
                 "SELECT * FROM reservations WHERE status='reserved' AND start_time < ?",
@@ -461,7 +465,7 @@ def auto_expire():
             if not exists:
                 db.execute(
                     "INSERT INTO violations(user_id,reservation_id,reason,created_at) VALUES(?,?,?,?)",
-                    (rv["user_id"], rv["id"], "预约开始15分钟后未签到，系统自动取消", now_text()),
+                    (rv["user_id"], rv["id"], f"预约开始{cancel_minutes}分钟后未签到，系统自动取消", now_text()),
                 )
 
 
@@ -722,6 +726,12 @@ class Handler(BaseHTTPRequestHandler):
                 target_user_id = data.get("user_id") or user["id"]
                 if target_user_id != user["id"] and not has_perm(user, "reservation:manage"):
                     return self.send_json({"error": "没有代预约权限"}, 403)
+                active_count = db.execute(
+                    "SELECT COUNT(*) c FROM reservations WHERE user_id=? AND status='reserved'",
+                    (target_user_id,),
+                ).fetchone()["c"]
+                if active_count >= 3:
+                    return self.send_json({"error": "每人最多同时保留3个待签到预约"}, 400)
                 start = datetime.strptime(data["start_time"], "%Y-%m-%dT%H:%M")
                 hours = int(data["hours"])
                 max_hours = int(db.execute("SELECT value FROM parameters WHERE key='max_hours'").fetchone()["value"])
@@ -732,6 +742,13 @@ class Handler(BaseHTTPRequestHandler):
                 if hours < 1 or hours > max_hours:
                     return self.send_json({"error": f"单次预约必须为1到{max_hours}小时"}, 400)
                 end = start + timedelta(hours=hours)
+                seat = db.execute("SELECT s.*, r.open_time, r.close_time FROM seats s JOIN rooms r ON s.room_id=r.id WHERE s.id=?", (data["seat_id"],)).fetchone()
+                if not seat or seat["status"] != "active":
+                    return self.send_json({"error": "座位不可用"}, 400)
+                start_hm = start.strftime("%H:%M")
+                end_hm = end.strftime("%H:%M")
+                if start_hm < seat["open_time"] or end_hm > seat["close_time"]:
+                    return self.send_json({"error": f"预约时间需在自习室开放时间({seat['open_time']}-{seat['close_time']})内"}, 400)
                 overlap = db.execute(
                     """
                     SELECT id FROM reservations
@@ -742,9 +759,6 @@ class Handler(BaseHTTPRequestHandler):
                 ).fetchone()
                 if overlap:
                     return self.send_json({"error": "该座位在所选时间已被预约"}, 409)
-                seat = db.execute("SELECT status FROM seats WHERE id=?", (data["seat_id"],)).fetchone()
-                if not seat or seat["status"] != "active":
-                    return self.send_json({"error": "座位不可用"}, 400)
                 db.execute(
                     "INSERT INTO reservations(user_id,seat_id,start_time,end_time,status,created_at) VALUES(?,?,?,?,?,?)",
                     (
@@ -761,6 +775,8 @@ class Handler(BaseHTTPRequestHandler):
                 rv = db.execute("SELECT * FROM reservations WHERE id=?", (data["id"],)).fetchone()
                 if not rv:
                     return self.send_json({"error": "预约不存在"}, 404)
+                if rv["status"] != "reserved":
+                    return self.send_json({"error": "只能取消待签到的预约"}, 400)
                 if rv["user_id"] != user["id"] and not has_perm(user, "reservation:manage"):
                     return self.send_json({"error": "没有取消该预约的权限"}, 403)
                 db.execute("UPDATE reservations SET status='cancelled' WHERE id=?", (data["id"],))
@@ -776,6 +792,8 @@ class Handler(BaseHTTPRequestHandler):
             if not rv:
                 return self.send_json({"error": "预约不存在"}, 404)
             rv = dict(rv)
+            if rv["status"] != "reserved":
+                return self.send_json({"error": "该预约不可签到"}, 400)
             if rv["user_id"] != user["id"] and not has_perm(user, "reservation:manage"):
                 return self.send_json({"error": "没有签到权限"}, 403)
             if data.get("code", "").strip().upper() != rv["daily_code"].upper():
@@ -1010,21 +1028,6 @@ def is_seat_available(db, seat_id, start, end):
     return overlap is None
 
 
-def render_seat_answer(seats):
-    if not seats:
-        return "暂时没有找到符合条件的可用座位。"
-    lines = ["找到以下可预约座位："]
-    for s in seats:
-        tags = []
-        if s["near_window"]:
-            tags.append("靠窗")
-        if s["has_power"]:
-            tags.append("有插座")
-        if s["quiet_zone"]:
-            tags.append("安静区")
-        lines.append(f"{s['room_name']} {s['seat_code'] if 'seat_code' in s else s['code']}（{s['building']}，{'/'.join(tags) or '普通座'}）")
-    return "\n".join(lines)
-
 
 def render_assistant_seat_answer(seats, filters, time_window):
     if not seats:
@@ -1057,7 +1060,7 @@ def render_assistant_seat_answer(seats, filters, time_window):
 
 def render_reservation_answer(items, prefix):
     if not items:
-        return "今天没有查询到你的有效预约。"
+        return "没有查询到你的有效预约。"
     lines = [prefix]
     for r in items:
         lines.append(f"{r['room_name']} {r['seat_code']}，{r['start_time']} 到 {r['end_time']}，状态：{r['status']}")
