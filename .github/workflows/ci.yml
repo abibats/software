@@ -23,7 +23,7 @@ jobs:
         run: pip install flake8
 
       - name: Lint backend
-        run: flake8 backend/server.py backend/test_server.py backend/smoke_test.py --max-line-length=120 --statistics
+        run: flake8 backend/server.py backend/test_server.py backend/smoke_test.py --statistics
 
   build:
     name: Build and verify
