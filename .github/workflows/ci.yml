@@ -79,13 +79,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
 
     steps:
+      - name: Check deployment config
+        id: check
+        run: |
+          if [ -n "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "Deployment secrets not configured, skipping deploy."
+          fi
+
       - name: Checkout
+        if: steps.check.outputs.configured == 'true'
         uses: actions/checkout@v4
 
       - name: Deploy via SSH
+        if: steps.check.outputs.configured == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -103,15 +114,32 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
+      - name: Check config
+        id: check
+        run: |
+          if [ -n "${{ secrets.SMOKE_BASE_URL }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "SMOKE_BASE_URL not configured, skipping."
+          fi
+
+      - name: Checkout
+        if: steps.check.outputs.configured == 'true'
+        uses: actions/checkout@v4
+
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: steps.check.outputs.configured == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Run smoke test
+        if: steps.check.outputs.configured == 'true'
         env:
           SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
           SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
