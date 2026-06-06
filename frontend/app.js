@@ -35,6 +35,11 @@ async function request(path, options = {}) {
     },
   });
   const data = await res.json();
+  if (res.status === 401 && api.token) {
+    toast("登录已过期，请重新登录");
+    logout();
+    throw new Error("登录已过期");
+  }
   if (!res.ok) throw new Error(data.error || "请求失败");
   return data;
 }
