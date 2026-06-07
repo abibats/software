@@ -704,7 +704,6 @@ class Handler(BaseHTTPRequestHandler):
                     params.append(query["status"][0])
                 sql += " ORDER BY r.id, s.code"
                 seat_list = rows(db.execute(sql, params))
-                now = datetime.now()
                 for seat in seat_list:
                     active = db.execute(
                         "SELECT id FROM reservations WHERE seat_id=? AND status='reserved' AND start_time<=? AND end_time>?",
