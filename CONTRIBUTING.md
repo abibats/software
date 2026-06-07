@@ -10,9 +10,23 @@
 | `feature/admin-frontend` | 管理端前端 |
 | `feature/reservation-backend` | 后端预约业务 |
 | `feature/auth-backend` | 后端权限与数据库 |
-| `feature/testing-devops` | 测试、DevOps、智能助手 |
+| `feature/testing-devops` | 测试、DevOps |
+| `assistant-api-integration` | 智能助手 API 集成 |
+| `feature/bugfix-core-logic` | 核心业务逻辑修复 |
+| `feature/infra-improvements` | 基础设施改进 |
+| `fix/token-expire-logout` | Token 过期自动登出 |
+| `health-check-test` | 健康检查测试 |
 
 ## 开发流程
+
+### 提交前运行测试
+
+```bash
+cd backend
+python -m unittest discover -s . -p "test_*.py" -v
+```
+
+确保所有 29 个测试通过后再创建 PR。
 
 ```
 1. git checkout feature/xxx                 # 切到自己的分支

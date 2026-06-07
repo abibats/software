@@ -28,11 +28,11 @@
 - **日期：** 2026-06-05
 - **作者：** 梁志杰
 - **Reviewer：** 马龙、尚俊霖
-- **分支：** `feature/assistant-api` → `main`
+- **分支：** `feature/student-frontend` → `main`
 
 ### Review 内容
 
-新增完整的用户故事文档，包含 4 个 Epic、15 个用户故事及验收标准。
+新增完整的用户故事文档，包含 4 个 Epic、13 个用户故事及验收标准。
 
 ### Review 意见
 
