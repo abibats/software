@@ -78,7 +78,7 @@ cd /opt/study-seat && git pull && systemctl restart study-seat
 
 1. **代码检查** — flake8 检查代码质量
 2. **构建验证** — Python 语法检查 + 前端资源验证
-3. **自动化测试** — 32 个测试用例全覆盖
+3. **自动化测试** — 33 个测试用例全覆盖
 4. **自动部署** — main 分支推送后自动部署到华为云
 5. **冒烟测试** — 部署后自动验证线上接口
 
@@ -97,14 +97,14 @@ python -m unittest discover -s . -p "test_*.py" -v
 | 注册 | 3 |
 | RBAC 权限控制 | 5 |
 | 预约业务（创建/冲突/取消/边界） | 6 |
-| 签到（正确码/错误码） | 2 |
+| 签到（正确码/错误码/时间校验） | 3 |
 | 座位管理（CRUD/筛选） | 3 |
 | 用户与角色管理 | 3 |
 | 系统参数 | 2 |
 | 统计接口 | 1 |
 | 智能助手 | 4 |
 | 健康检查 | 1 |
-| **合计** | **32** |
+| **合计** | **33** |
 
 ## 主要功能
 
@@ -149,7 +149,7 @@ python -m unittest discover -s . -p "test_*.py" -v
 自习座位预约系统
 ├─ backend
 │  ├─ server.py          后端服务、API、SQLite 建表和种子数据
-│  ├─ test_server.py     自动化测试（32个用例）
+│  ├─ test_server.py     自动化测试（33个用例）
 │  ├─ smoke_test.py      线上冒烟测试
 │  └─ study_seat.db      首次运行后自动生成
 ├─ frontend

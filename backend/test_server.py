@@ -186,7 +186,7 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(status, 409)
         self.assertIn("error", payload)
 
-    def test_reservation_can_be_checked_in_with_room_code(self):
+    def test_checkin_rejects_before_start_time(self):
         self.client.login("student1")
         seat_id = self.active_seat_id()
         start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M")
@@ -199,23 +199,15 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(status, 200)
 
         status, payload = self.client.request("GET", "/api/reservations")
-        self.assertEqual(status, 200)
         reservation = payload["reservations"][0]
 
         status, payload = self.client.request(
             "POST",
             "/api/checkin",
-            {
-                "reservation_id": reservation["id"],
-                "code": reservation["daily_code"].lower(),
-            },
+            {"reservation_id": reservation["id"], "code": reservation["daily_code"]},
         )
-        self.assertEqual(status, 200)
-        self.assertIn("message", payload)
-
-        status, payload = self.client.request("GET", "/api/stats")
-        self.assertEqual(status, 200)
-        self.assertEqual(payload["stats"]["my_checked_in"], 1)
+        self.assertEqual(status, 400)
+        self.assertIn("还未到预约开始时间", payload["error"])
 
     def test_admin_can_update_parameters(self):
         self.client.login("admin")

@@ -831,6 +831,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "没有签到权限"}, 403)
             if data.get("code", "").strip().upper() != rv["daily_code"].upper():
                 return self.send_json({"error": "教室动态编码错误"}, 400)
+            if now_text() < rv["start_time"]:
+                return self.send_json({"error": "还未到预约开始时间，无法签到"}, 400)
             db.execute(
                 "UPDATE reservations SET status='checked_in', checked_in_at=? WHERE id=?",
                 (now_text(), rv["id"]),
