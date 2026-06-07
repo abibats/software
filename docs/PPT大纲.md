@@ -108,7 +108,7 @@
 - 每次 PR 至少一位成员 Review
 
 **实际提交记录：**
-- 共合并 6 个核心 Pull Request（含 Review 记录）
+- 共合并 13 个 Pull Request（#2 ~ #13）
 - 使用 Conventional Commits 规范（feat/fix/docs/chore）
 - 原子提交：每个 commit 对应一个明确的任务
 
