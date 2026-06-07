@@ -497,6 +497,39 @@ $("loginForm").onsubmit = async (event) => {
   }
 };
 
+$("toRegister").onclick = (e) => {
+  e.preventDefault();
+  $("loginForm").classList.add("hidden");
+  $("registerForm").classList.remove("hidden");
+};
+
+$("toLogin").onclick = (e) => {
+  e.preventDefault();
+  $("registerForm").classList.add("hidden");
+  $("loginForm").classList.remove("hidden");
+};
+
+$("registerForm").onsubmit = async (event) => {
+  event.preventDefault();
+  try {
+    const body = {
+      username: $("regUsername").value,
+      password: $("regPassword").value,
+      display_name: $("regDisplayName").value,
+      department: $("regDepartment").value,
+    };
+    await request("/api/register", { method: "POST", body: JSON.stringify(body) });
+    toast("注册成功，请登录");
+    $("registerForm").classList.add("hidden");
+    $("loginForm").classList.remove("hidden");
+    $("username").value = body.username;
+    $("password").value = "";
+    $("password").focus();
+  } catch (err) {
+    toast(err.message);
+  }
+};
+
 document.querySelectorAll("[data-user]").forEach((btn) => {
   btn.onclick = () => {
     $("username").value = btn.dataset.user;

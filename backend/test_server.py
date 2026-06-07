@@ -590,6 +590,40 @@ class StudySeatApiTest(unittest.TestCase):
         )
         self.assertEqual(status, 404)
 
+    def test_register_success(self):
+        status, payload = self.client.request("POST", "/api/register", {
+            "username": "newuser",
+            "password": "abcd1234",
+            "display_name": "新同学",
+            "department": "物理学院",
+        })
+        self.assertEqual(status, 200)
+        self.assertIn("注册成功", payload["message"])
+
+    def test_register_duplicate_username(self):
+        self.client.request("POST", "/api/register", {
+            "username": "dupuser",
+            "password": "pass1234",
+        })
+        status, payload = self.client.request("POST", "/api/register", {
+            "username": "dupuser",
+            "password": "pass1234",
+        })
+        self.assertEqual(status, 409)
+
+    def test_register_then_login(self):
+        self.client.request("POST", "/api/register", {
+            "username": "regtest",
+            "password": "test1234",
+            "display_name": "注册测试",
+        })
+        status, payload = self.client.request("POST", "/api/login", {
+            "username": "regtest",
+            "password": "test1234",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["user"]["role_name"], "学生")
+
 
 if __name__ == "__main__":
     unittest.main()

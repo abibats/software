@@ -19,6 +19,15 @@
           <label>账号<input id="username" value="student1" autocomplete="username"></label>
           <label>密码<input id="password" value="123456" type="password" autocomplete="current-password"></label>
           <button class="primary" type="submit">登录系统</button>
+          <p class="form-switch">还没有账号？<a id="toRegister" href="#">立即注册</a></p>
+        </form>
+        <form id="registerForm" class="login-form hidden">
+          <label>用户名<input id="regUsername" autocomplete="username" placeholder="2-20个字符"></label>
+          <label>密码<input id="regPassword" type="password" autocomplete="new-password" placeholder="至少4个字符"></label>
+          <label>显示名<input id="regDisplayName" placeholder="可选，默认同用户名"></label>
+          <label>院系<input id="regDepartment" placeholder="可选"></label>
+          <button class="primary" type="submit">注册</button>
+          <p class="form-switch">已有账号？<a id="toLogin" href="#">返回登录</a></p>
         </form>
         <div class="demo-users">
           <button data-user="student1">学生 student1</button>

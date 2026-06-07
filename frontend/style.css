@@ -63,6 +63,15 @@ button {
   display: grid;
   gap: 12px;
 }
+.form-switch {
+  text-align: center;
+  font-size: 14px;
+  color: #667085;
+}
+.form-switch a {
+  color: #1570EF;
+  text-decoration: none;
+}
 label {
   display: grid;
   gap: 6px;

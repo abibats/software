@@ -545,6 +545,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.health()
             if path == "/api/login" and method == "POST":
                 return self.login()
+            if path == "/api/register" and method == "POST":
+                return self.register()
             user = self.require_user()
             if not user:
                 return
@@ -614,6 +616,30 @@ class Handler(BaseHTTPRequestHandler):
         TOKENS[token] = user["id"]
         user = dict(user)
         self.send_json({"token": token, "user": self.public_user(user), "permissions": json.loads(user["permissions"])})
+
+    def register(self):
+        data = self.read_json()
+        username = (data.get("username") or "").strip()
+        password = (data.get("password") or "").strip()
+        display_name = (data.get("display_name") or "").strip()
+        department = (data.get("department") or "").strip()
+        if not username or not password:
+            return self.send_json({"error": "用户名和密码不能为空"}, 400)
+        if len(username) < 2 or len(username) > 20:
+            return self.send_json({"error": "用户名长度应为2-20个字符"}, 400)
+        if len(password) < 4:
+            return self.send_json({"error": "密码长度不能少于4个字符"}, 400)
+        with connect() as db:
+            if db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone():
+                return self.send_json({"error": "该用户名已被注册"}, 409)
+            student_role = db.execute("SELECT id FROM roles WHERE name='学生'").fetchone()
+            if not student_role:
+                return self.send_json({"error": "系统未初始化"}, 500)
+            db.execute(
+                "INSERT INTO users(username,password,display_name,department,role_id) VALUES(?,?,?,?,?)",
+                (username, password, display_name or username, department or "未填写", student_role["id"]),
+            )
+        self.send_json({"message": "注册成功"})
 
     def rooms(self, method, user):
         data = self.read_json() if method in ("POST", "PUT") else {}
