@@ -203,3 +203,4 @@ cp backend/config.example.json backend/config.json
 ```
 
 `backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `MIMO_API_KEY`、`MIMO_API_URL`、`MIMO_API_FORMAT`、`MIMO_MODEL` 环境变量。
+
