@@ -38,48 +38,39 @@ http://127.0.0.1:8000
 
 ## 华为云部署
 
-### 前提条件
+系统已部署至华为云 ECS，可直接访问：
 
-- 华为云 ECS（CentOS / Ubuntu 均可）
-- 安全组放行 80 端口
-- 已安装 Python 3.10+
+**在线地址：** http://120.46.142.189
 
-### 一键部署
+### 服务器配置
+
+| 配置项 | 说明 |
+|--------|------|
+| ECS 规格 | 通用计算型 2vCPUs 2GiB |
+| 操作系统 | Ubuntu 24.04 |
+| Web 服务 | Nginx 反向代理（80 → 8000） |
+| 应用服务 | systemd 管理（study-seat） |
+| 代码路径 | /opt/study-seat |
+
+### 自动部署
+
+已配置 GitHub Actions 自动部署：push 到 main 分支后，CI/CD 流水线自动完成代码检查、测试、SSH 部署到华为云并重启服务。
+
+详细的首次部署步骤请参考 [docs/华为云部署指南.md](docs/华为云部署指南.md)。
+
+### 日常维护
 
 ```bash
-# 1. 上传 deploy 目录到服务器
-scp -r deploy/ root@<ECS公网IP>:/opt/study-seat/
+# 手动重启服务
+ssh root@120.46.142.189
+systemctl restart study-seat
 
-# 2. 安装 systemd 服务
-sudo cp deploy/study-seat.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable study-seat
+# 查看日志
+journalctl -u study-seat -f
 
-# 3. 配置 Nginx 反向代理（可选）
-sudo cp deploy/nginx.conf /etc/nginx/conf.d/study-seat.conf
-sudo systemctl reload nginx
-
-# 4. 执行部署
-cd /opt/study-seat
-bash deploy/deploy.sh
+# 更新代码
+cd /opt/study-seat && git pull && systemctl restart study-seat
 ```
-
-### 部署脚本说明
-
-`deploy/deploy.sh` 会自动完成以下步骤：
-
-1. 拉取最新代码（git pull）
-2. 运行全部自动化测试（29个用例）
-3. 测试通过后重启 systemd 服务
-4. 健康检查确认服务正常
-
-### 环境变量
-
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `APP_DIR` | `/opt/study-seat` | 应用目录 |
-| `BRANCH` | `main` | Git 分支 |
-| `MIMO_API_KEY` | 无 | 智能助手 API Key（可选） |
 
 ## CI/CD 流水线
 
