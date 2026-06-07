@@ -28,7 +28,7 @@
 - **日期：** 2026-06-05
 - **作者：** 梁志杰
 - **Reviewer：** 马龙、尚俊霖
-- **分支：** `feature/project-management` → `main`
+- **分支：** `feature/assistant-api` → `main`
 
 ### Review 内容
 
@@ -124,13 +124,13 @@
 
 ### Review 内容
 
-11 个测试用例说明、CI/CD 流水线配置、智能助手实现说明。
+29 个测试用例说明、CI/CD 流水线配置、智能助手实现说明。
 
 ### Review 意见
 
-1. **测试覆盖：** 核心功能（登录、权限、预约、签到）都有测试覆盖
-2. **CI 流水线：** GitHub Actions 自动运行测试
-3. **建议补充：** 后续可增加取消预约和座位 CRUD 的测试用例
+1. **测试覆盖：** 核心功能（登录、权限、预约、签到、座位管理、智能助手）均有测试覆盖
+2. **CI 流水线：** GitHub Actions 五阶段流水线（lint → build → test → deploy → smoke test）
+3. **测试完整性：** 包含取消预约、座位 CRUD、权限边界、边界情况等测试用例
 
 ### Review 结论
 

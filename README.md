@@ -167,14 +167,21 @@ python -m unittest discover -s . -p "test_*.py" -v
 │  ├─ study-seat.service systemd 服务配置
 │  └─ nginx.conf         Nginx 反向代理配置
 ├─ docs
-│  ├─ 用户故事.md         用户故事与验收标准
-│  ├─ 分工说明.md         6人分工
-│  ├─ 功能说明.md         功能描述
-│  ├─ 接口说明.md         API 文档
-│  ├─ 代码Review记录.md   Review 记录
-│  ├─ 例会记录.md         例会记录
-│  ├─ 测试用例说明.md     测试用例文档
-│  └─ screenshots/       CI/CD 截图
+│  ├─ 用户故事.md           用户故事与验收标准
+│  ├─ 分工说明.md           6人分工
+│  ├─ 功能说明.md           功能描述
+│  ├─ 接口说明.md           API 文档
+│  ├─ 代码Review记录.md     Review 记录
+│  ├─ 例会记录.md           例会记录
+│  ├─ 测试用例说明.md       测试用例文档
+│  ├─ 预约业务逻辑说明.md   预约API与业务规则
+│  ├─ 数据库与权限设计说明.md 数据库表结构与RBAC
+│  ├─ 前端页面说明.md       学生端页面说明
+│  ├─ 管理端页面说明.md     管理端页面说明
+│  ├─ 华为云部署指南.md     部署步骤
+│  ├─ PPT大纲.md           期末报告PPT内容
+│  ├─ 演示视频脚本.md       5分钟视频录制脚本
+│  └─ screenshots/         CI/CD 截图
 ├─ .github/workflows/
 │  └─ ci.yml             GitHub Actions CI/CD 流水线
 ├─ CONTRIBUTING.md       协作规范
