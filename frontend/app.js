@@ -248,14 +248,19 @@ async function createReservation(seatId) {
   const start = $(`start-${seatId}`).value;
   const hours = $(`hours-${seatId}`).value;
   if (!start) return toast("请选择开始时间");
-  await request("/api/reservations", {
-    method: "POST",
-    body: JSON.stringify({ seat_id: seatId, start_time: start, hours }),
-  });
-  toast("预约成功");
-  await reload();
-  state.page = "records";
-  render();
+  try {
+    await request("/api/reservations", {
+      method: "POST",
+      body: JSON.stringify({ seat_id: seatId, start_time: start, hours }),
+    });
+    toast("预约成功");
+    await reload();
+    state.page = "records";
+    render();
+  } catch (err) {
+    toast("预约失败：" + err.message);
+    await reload();
+  }
 }
 
 function renderRecords() {
