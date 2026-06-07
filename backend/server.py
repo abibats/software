@@ -1028,7 +1028,6 @@ def is_seat_available(db, seat_id, start, end):
     return overlap is None
 
 
-
 def render_assistant_seat_answer(seats, filters, time_window):
     if not seats:
         return "暂时没有找到符合条件的可用座位。你可以放宽条件，例如去掉靠窗或插座要求，或者换一个时间段。"
