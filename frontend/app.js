@@ -308,21 +308,29 @@ async function renderViolations() {
 }
 
 async function checkin(id) {
-  await request("/api/checkin", {
-    method: "POST",
-    body: JSON.stringify({ reservation_id: id, code: $(`code-${id}`).value }),
-  });
-  toast("签到成功");
-  await reload();
+  try {
+    await request("/api/checkin", {
+      method: "POST",
+      body: JSON.stringify({ reservation_id: id, code: $(`code-${id}`).value }),
+    });
+    toast("签到成功");
+    await reload();
+  } catch (err) {
+    toast("签到失败：" + err.message);
+  }
 }
 
 async function cancelReservation(id) {
-  await request("/api/reservations", {
-    method: "PUT",
-    body: JSON.stringify({ id }),
-  });
-  toast("预约已取消");
-  await reload();
+  try {
+    await request("/api/reservations", {
+      method: "PUT",
+      body: JSON.stringify({ id }),
+    });
+    toast("预约已取消");
+    await reload();
+  } catch (err) {
+    toast("取消失败：" + err.message);
+  }
 }
 
 function renderAssistant() {
