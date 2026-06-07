@@ -706,7 +706,7 @@ class Handler(BaseHTTPRequestHandler):
                 seat_list = rows(db.execute(sql, params))
                 for seat in seat_list:
                     active = db.execute(
-                        "SELECT id FROM reservations WHERE seat_id=? AND status='reserved' AND end_time>?",
+                        "SELECT id FROM reservations WHERE seat_id=? AND status IN ('reserved','checked_in') AND end_time>?",
                         (seat["id"], now_text()),
                     ).fetchone()
                     seat["occupied"] = bool(active)
