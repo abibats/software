@@ -209,6 +209,31 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("还未到预约开始时间", payload["error"])
 
+    def test_checkin_success_when_start_time_reached(self):
+        self.client.login("student1")
+        seat_id = self.active_seat_id()
+        now = datetime.now()
+        start = (now - timedelta(minutes=5)).replace(second=0, microsecond=0)
+        end = start + timedelta(hours=2)
+        db = server.connect()
+        db.execute(
+            "INSERT INTO reservations(user_id,seat_id,start_time,end_time,status,created_at) VALUES(?,?,?,?,?,?)",
+            (3, seat_id, start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"), "reserved", server.now_text()),
+        )
+        db.commit()
+        db.close()
+
+        status, payload = self.client.request("GET", "/api/reservations")
+        reservation = payload["reservations"][0]
+
+        status, payload = self.client.request(
+            "POST",
+            "/api/checkin",
+            {"reservation_id": reservation["id"], "code": reservation["daily_code"]},
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("message", payload)
+
     def test_admin_can_update_parameters(self):
         self.client.login("admin")
         status, payload = self.client.request(

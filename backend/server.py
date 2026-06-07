@@ -706,8 +706,8 @@ class Handler(BaseHTTPRequestHandler):
                 seat_list = rows(db.execute(sql, params))
                 for seat in seat_list:
                     active = db.execute(
-                        "SELECT id FROM reservations WHERE seat_id=? AND status IN ('reserved','checked_in') AND end_time>?",
-                        (seat["id"], now_text()),
+                        "SELECT id FROM reservations WHERE seat_id=? AND status IN ('reserved','checked_in') AND start_time<=? AND end_time>?",
+                        (seat["id"], now_text(), now_text()),
                     ).fetchone()
                     seat["occupied"] = bool(active)
                 return self.send_json({"seats": seat_list})

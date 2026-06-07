@@ -232,11 +232,10 @@ async function searchSeats() {
 function drawSeatCards(seats) {
   const minTime = datetimeLocalValue(nextHourDate());
   $("seatCards").innerHTML = seats.map((s) => `
-    <div class="card seat-card${s.occupied ? " occupied" : ""}">
+    <div class="card seat-card">
       <strong>${s.room_name} · ${s.code}</strong>
       <span>${s.building} / 开放 ${s.open_time}-${s.close_time}</span>
-      <div class="tags">${tagList(s)}${s.occupied ? '<span class="tag" style="background:#F2F4F7;color:#B42318;">已被预约</span>' : '<span class="tag" style="background:#D1FADF;color:#039855;">空闲</span>'}</div>
-      ${s.occupied ? '<p style="color:#B42318;font-size:13px;margin:0">该座位当前有预约，你可以选择其他时间段尝试预约。</p>' : ''}
+      <div class="tags">${tagList(s)}${s.occupied ? '<span class="tag" style="background:#FEF3C7;color:#B45309;">使用中</span>' : '<span class="tag" style="background:#D1FADF;color:#039855;">空闲</span>'}</div>
       <label>开始时间<input type="datetime-local" id="start-${s.id}" min="${minTime}" value="${minTime}" step="3600"></label>
       <label>预约时长<select id="hours-${s.id}"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
       <button class="primary" onclick="createReservation(${s.id})">预约该座位</button>
