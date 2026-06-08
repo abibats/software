@@ -80,7 +80,7 @@ cd /opt/study-seat && git pull && systemctl restart study-seat
 2. **构建验证** — Python 语法检查 + 前端资源验证
 3. **自动化测试** — 33 个测试用例全覆盖
 4. **自动部署** — main 分支推送后自动部署到华为云
-5. **冒烟测试** — 部署后自动验证线上接口
+5. **smoke测试** — 部署后自动验证线上接口
 
 ## 运行测试
 
