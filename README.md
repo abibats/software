@@ -97,14 +97,14 @@ python -m unittest discover -s . -p "test_*.py" -v
 | 注册 | 3 |
 | RBAC 权限控制 | 5 |
 | 预约业务（创建/冲突/取消/边界） | 6 |
-| 签到（正确码/错误码/时间校验） | 4 |
+| 签到（正确码/错误码/时间校验） | 3 |
 | 座位管理（CRUD/筛选） | 3 |
 | 用户与角色管理 | 3 |
 | 系统参数 | 2 |
 | 统计接口 | 1 |
 | 智能助手 | 4 |
 | 健康检查 | 1 |
-| **合计** | **34** |
+| **合计** | **33** |
 
 ## 主要功能
 
@@ -149,7 +149,7 @@ python -m unittest discover -s . -p "test_*.py" -v
 自习座位预约系统
 ├─ backend
 │  ├─ server.py          后端服务、API、SQLite 建表和种子数据
-│  ├─ test_server.py     自动化测试（34个用例）
+│  ├─ test_server.py     自动化测试（33个用例）
 │  ├─ smoke_test.py      线上冒烟测试
 │  └─ study_seat.db      首次运行后自动生成
 ├─ frontend

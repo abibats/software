@@ -104,7 +104,7 @@ class StudySeatApiTest(unittest.TestCase):
 
     def future_hour(self):
         return (datetime.now() + timedelta(days=1)).replace(
-            minute=0, second=0, microsecond=0
+            hour=9, minute=0, second=0, microsecond=0
         )
 
     def active_seat_id(self):
