@@ -379,6 +379,38 @@ class StudySeatApiTest(unittest.TestCase):
         )
         self.assertEqual(cancelled["status"], "cancelled")
 
+    def test_reservations_filter_by_status(self):
+        self.client.login("student1")
+        seat_id = self.active_seat_id()
+        start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M")
+
+        status, _ = self.client.request(
+            "POST",
+            "/api/reservations",
+            {"seat_id": seat_id, "start_time": start_time, "hours": 1},
+        )
+        self.assertEqual(status, 200)
+
+        status, payload = self.client.request("GET", "/api/reservations")
+        reservation = payload["reservations"][0]
+        status, _ = self.client.request(
+            "PUT", "/api/reservations", {"id": reservation["id"]}
+        )
+        self.assertEqual(status, 200)
+
+        status, payload = self.client.request(
+            "GET", "/api/reservations", query={"status": "cancelled"}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(len(payload["reservations"]), 1)
+        self.assertEqual(payload["reservations"][0]["id"], reservation["id"])
+
+        status, payload = self.client.request(
+            "GET", "/api/reservations", query={"status": "unknown"}
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("error", payload)
+
     def test_cancel_other_user_reservation_forbidden(self):
         self.client.login("student1")
         seat_id = self.active_seat_id()

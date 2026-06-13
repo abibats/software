@@ -747,12 +747,22 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET":
                 base = reservation_projection_sql()
                 params = []
+                filters = []
                 if not has_perm(user, "reservation:view"):
-                    base += " WHERE rv.user_id=?"
+                    filters.append("rv.user_id=?")
                     params.append(user["id"])
                 elif query.get("mine") == ["1"]:
-                    base += " WHERE rv.user_id=?"
+                    filters.append("rv.user_id=?")
                     params.append(user["id"])
+                if query.get("status"):
+                    status = query["status"][0]
+                    allowed_statuses = {"reserved", "checked_in", "cancelled", "expired"}
+                    if status not in allowed_statuses:
+                        return self.send_json({"error": "预约状态筛选条件无效"}, 400)
+                    filters.append("rv.status=?")
+                    params.append(status)
+                if filters:
+                    base += " WHERE " + " AND ".join(filters)
                 base += " ORDER BY rv.start_time DESC"
                 return self.send_json({"reservations": rows(db.execute(base, params))})
             if method == "POST":

@@ -230,6 +230,20 @@ nav button.active, nav button:hover {
   margin-bottom: 16px;
 }
 .toolbar label { min-width: 150px; }
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.section-head h3 {
+  margin: 0;
+}
+.section-head label {
+  min-width: 160px;
+}
 .seat-card {
   display: grid;
   gap: 10px;

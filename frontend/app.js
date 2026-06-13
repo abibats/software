@@ -13,6 +13,7 @@ const state = {
   users: [],
   params: [],
   stats: {},
+  reservationStatus: "",
   chatMessages: [{ role: "bot", text: "你好，我可以帮你查空座、找靠窗/有插座座位，也可以查询你今天定了哪里。" }],
 };
 
@@ -145,12 +146,20 @@ async function loadData() {
     request("/api/stats").then((d) => (state.stats = d.stats)),
     request("/api/rooms").then((d) => (state.rooms = d.rooms)),
     request("/api/seats").then((d) => (state.seats = d.seats)),
-    request("/api/reservations").then((d) => (state.reservations = d.reservations)),
+    loadReservations(),
   ];
   if (can("user:manage")) calls.push(request("/api/users").then((d) => (state.users = d.users)));
   if (can("user:manage") || can("role:manage")) calls.push(request("/api/roles").then((d) => (state.roles = d.roles)));
   if (can("system:config")) calls.push(request("/api/parameters").then((d) => (state.params = d.parameters)));
   await Promise.all(calls.map((p) => p.catch((err) => console.warn(err.message))));
+}
+
+async function loadReservations() {
+  const params = new URLSearchParams();
+  if (state.reservationStatus) params.set("status", state.reservationStatus);
+  const query = params.toString();
+  const data = await request(`/api/reservations${query ? `?${query}` : ""}`);
+  state.reservations = data.reservations;
 }
 
 function render() {
@@ -263,6 +272,13 @@ async function createReservation(seatId) {
 }
 
 function renderRecords() {
+  const statusOptions = [
+    ["", "全部状态"],
+    ["reserved", "待签到"],
+    ["checked_in", "已签到"],
+    ["cancelled", "已取消"],
+    ["expired", "违约取消"],
+  ];
   const rows = state.reservations.map((r) => `
     <tr>
       <td>${r.id}</td>
@@ -283,7 +299,14 @@ function renderRecords() {
     </tr>
   `).join("");
   $("recordsPage").innerHTML = `
-    <h3>${can("reservation:view") ? "预约记录" : "我的预约记录"}</h3>
+    <div class="section-head">
+      <h3>${can("reservation:view") ? "预约记录" : "我的预约记录"}</h3>
+      <label>状态筛选
+        <select id="reservationStatusFilter">
+          ${statusOptions.map(([value, label]) => `<option value="${value}" ${state.reservationStatus === value ? "selected" : ""}>${label}</option>`).join("")}
+        </select>
+      </label>
+    </div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>ID</th><th>预约人</th><th>座位</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
@@ -293,6 +316,11 @@ function renderRecords() {
     <p class="sub">演示提示：表格中显示了该教室今日动态编码，真实系统应显示在教室屏幕或二维码屏幕上。</p>
     ${can("violation:view") ? `<div id="violationBlock" class="table-wrap" style="margin-top:16px"></div>` : ""}
   `;
+  $("reservationStatusFilter").onchange = async (event) => {
+    state.reservationStatus = event.target.value;
+    await loadReservations();
+    renderRecords();
+  };
   if (can("violation:view")) renderViolations();
 }
 
