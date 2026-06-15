@@ -17,7 +17,8 @@ DB_PATH = BASE_DIR / "study_seat.db"
 CONFIG_PATH = BASE_DIR / "config.json"
 TOKENS = {}
 STARTED_AT = datetime.now()
-ASSISTANT_MODEL = "mimo-v2.5"
+ASSISTANT_API_URL = "https://api.deepseek.com/anthropic"
+ASSISTANT_MODEL = "DeepSeek-v4-pro"
 
 
 def now_text():
@@ -221,7 +222,7 @@ def config_value(config, key, env_key=None, default=None):
 
 
 def assistant_api_format(config, api_url):
-    configured = config_value(config, "mimo_api_format", "MIMO_API_FORMAT")
+    configured = config_value(config, "anthropic_api_format", "ANTHROPIC_API_FORMAT")
     if configured:
         return configured.lower()
     return "anthropic" if "/anthropic" in api_url else "openai"
@@ -236,7 +237,10 @@ def assistant_api_endpoint(api_url, api_format):
 
 def assistant_api_configured():
     config = load_config()
-    return bool(config_value(config, "mimo_api_key", "MIMO_API_KEY") or os.environ.get("AI_API_KEY"))
+    return bool(
+        config_value(config, "anthropic_auth_token", "ANTHROPIC_AUTH_TOKEN")
+        or os.environ.get("AI_API_KEY")
+    )
 
 
 def assistant_system_prompt():
@@ -341,16 +345,17 @@ def build_context_text(db, user, text):
 
 def call_assistant_api(db, user, text):
     config = load_config()
-    api_key = config_value(config, "mimo_api_key", "MIMO_API_KEY") or os.environ.get("AI_API_KEY")
+    api_key = (
+        config_value(config, "anthropic_auth_token", "ANTHROPIC_AUTH_TOKEN")
+        or os.environ.get("AI_API_KEY")
+    )
     if not api_key:
         return None
-    api_url = config_value(
-        config,
-        "mimo_api_url",
-        "MIMO_API_URL",
-        "https://api.mimo-v2.com/v1/chat/completions",
+    api_url = (
+        config_value(config, "anthropic_base_url", "ANTHROPIC_BASE_URL")
+        or ASSISTANT_API_URL
     )
-    model = ASSISTANT_MODEL
+    model = config_value(config, "anthropic_model", "ANTHROPIC_MODEL", ASSISTANT_MODEL)
     api_format = assistant_api_format(config, api_url)
     api_url = assistant_api_endpoint(api_url, api_format)
     if api_format == "anthropic":

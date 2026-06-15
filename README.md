@@ -184,7 +184,7 @@ python -m unittest discover -s . -p "test_*.py" -v
 
 ## 智能助手 API 配置
 
-后端智能助手默认使用本地规则回答。配置 `backend/config.json` 后，会优先调用 MiMo OpenAI-compatible Chat Completions API；接口失败或未配置 key 时，会自动回退到本地规则。
+后端智能助手默认使用本地规则回答。配置 `backend/config.json` 后，会优先调用 DeepSeek Anthropic-compatible API；接口失败或未配置 key 时，会自动回退到本地规则。
 
 复制模板：
 
@@ -196,12 +196,12 @@ cp backend/config.example.json backend/config.json
 
 ```json
 {
-  "mimo_api_key": "你的 MiMo API Key",
-  "mimo_api_url": "https://token-plan-cn.xiaomimimo.com/anthropic",
-  "mimo_api_format": "anthropic",
-  "mimo_model": "mimo-v2.5"
+  "anthropic_auth_token": "你的 DeepSeek API Key",
+  "anthropic_base_url": "https://api.deepseek.com/anthropic",
+  "anthropic_api_format": "anthropic",
+  "anthropic_model": "DeepSeek-v4-pro"
 }
 ```
 
-`backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `MIMO_API_KEY`、`MIMO_API_URL`、`MIMO_API_FORMAT`、`MIMO_MODEL` 环境变量。
+`backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_BASE_URL`、`ANTHROPIC_API_FORMAT`、`ANTHROPIC_MODEL` 环境变量。
 

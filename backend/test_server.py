@@ -102,7 +102,15 @@ class StudySeatApiTest(unittest.TestCase):
         # 1. 备份并清空与 AI 助手相关的环境变量，防止本地环境污染测试结果
         self.original_env = {
             key: os.environ.get(key)
-            for key in ("MIMO_API_KEY", "MIMO_API_URL", "MIMO_MODEL", "AI_API_KEY")
+            for key in (
+                "MIMO_API_KEY",
+                "MIMO_API_URL",
+                "MIMO_MODEL",
+                "ANTHROPIC_AUTH_TOKEN",
+                "ANTHROPIC_BASE_URL",
+                "ANTHROPIC_MODEL",
+                "AI_API_KEY",
+            )
         }
         for key in self.original_env:
             os.environ.pop(key, None)
@@ -332,17 +340,17 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertIn("reply", payload)
         self.assertNotEqual(payload.get("source"), "api")  # 回复来源不应是外部 API
 
-    def test_assistant_uses_mimo_api_when_configured(self):
+    def test_assistant_uses_deepseek_api_when_configured(self):
         """测试 AI 助手外部接口对接：配置环境变量后，系统应调用外部 LLM API"""
         self.client.login("student1")
         # 配置模拟的外部 AI 接口参数
-        os.environ["MIMO_API_KEY"] = "test-key"
-        os.environ["MIMO_API_URL"] = "https://example.test/chat/completions"
-        os.environ["MIMO_MODEL"] = "deprecated-model"
+        os.environ["ANTHROPIC_AUTH_TOKEN"] = "test-key"
+        os.environ["ANTHROPIC_BASE_URL"] = "https://example.test/anthropic"
+        os.environ["ANTHROPIC_MODEL"] = "DeepSeek-v4-pro"
 
         fake_payload = {
-            "choices": [
-                {"message": {"content": "可以，我已经根据当前座位数据为你筛选。"}}
+            "content": [
+                {"type": "text", "text": "\u53ef\u4ee5\uff0c\u6211\u5df2\u7ecf\u6839\u636e\u5f53\u524d\u5ea7\u4f4d\u6570\u636e\u4e3a\u4f60\u7b5b\u9009\u3002"}
             ]
         }
 
@@ -358,7 +366,8 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertTrue(mocked_urlopen.called)  # 确保 urllib 真的被调用了
         request = mocked_urlopen.call_args.args[0]
         body = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(body["model"], "mimo-v2.5")
+        self.assertEqual(request.full_url, "https://example.test/anthropic/v1/messages")
+        self.assertEqual(body["model"], "DeepSeek-v4-pro")
 
     def test_assistant_uses_config_file_when_present(self):
         """测试系统读取配置文件：应优先读取 config.json 中的 AI 接口配置"""
@@ -367,10 +376,10 @@ class StudySeatApiTest(unittest.TestCase):
         server.CONFIG_PATH.write_text(
             json.dumps(
                 {
-                    "mimo_api_key": "config-key",
-                    "mimo_api_url": "https://example.test/from-config",
-                    "mimo_api_format": "openai",
-                    "mimo_model": "mimo-v2.5",
+                    "anthropic_auth_token": "config-key",
+                    "anthropic_base_url": "https://example.test/from-config",
+                    "anthropic_api_format": "openai",
+                    "anthropic_model": "DeepSeek-v4-pro",
                 }
             ),
             encoding="utf-8",
@@ -397,7 +406,7 @@ class StudySeatApiTest(unittest.TestCase):
     def test_config_file_allows_utf8_bom(self):
         """测试对带有 BOM(Byte Order Mark) 的 UTF-8 配置文件的兼容性"""
         server.CONFIG_PATH.write_text(
-            json.dumps({"mimo_api_key": "config-key"}),
+            json.dumps({"anthropic_auth_token": "config-key"}),
             encoding="utf-8-sig",  # 强制写入带 BOM 的 UTF-8
         )
         # 确保系统能正常读取并判断助手已配置
@@ -409,10 +418,10 @@ class StudySeatApiTest(unittest.TestCase):
         server.CONFIG_PATH.write_text(
             json.dumps(
                 {
-                    "mimo_api_key": "config-key",
-                    "mimo_api_url": "https://token-plan-cn.xiaomimimo.com/anthropic",
-                    "mimo_api_format": "anthropic",  # 指定格式为 anthropic
-                    "mimo_model": "mimo-v2.5",
+                    "anthropic_auth_token": "config-key",
+                    "anthropic_base_url": "https://api.deepseek.com/anthropic",
+                    "anthropic_api_format": "anthropic",  # 指定格式为 anthropic
+                    "anthropic_model": "DeepSeek-v4-pro",
                 }
             ),
             encoding="utf-8",
@@ -436,11 +445,12 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(payload["reply"], "Anthropic 兼容接口已经返回。")
         self.assertEqual(
             request.full_url,
-            "https://token-plan-cn.xiaomimimo.com/anthropic/v1/messages",  # 验证自动补充了 API 路径
+            "https://api.deepseek.com/anthropic/v1/messages",  # 验证自动补充了 API 路径
         )
         # 验证 Anthropic 特有的请求体参数是否正确构建
         self.assertEqual(body["max_tokens"], 600)
         self.assertIn("system", body)
+        self.assertEqual(body["model"], "DeepSeek-v4-pro")
 
     def test_cancel_reservation(self):
         """测试取消预约功能（将预约状态变更为 cancelled）"""

@@ -1,6 +1,6 @@
 {
-  "mimo_api_key": "replace-with-your-mimo-api-key",
-  "mimo_api_url": "https://token-plan-cn.xiaomimimo.com/anthropic",
-  "mimo_api_format": "anthropic",
-  "mimo_model": "mimo-v2.5"
+  "anthropic_auth_token": "replace-with-your-deepseek-api-key",
+  "anthropic_base_url": "https://api.deepseek.com/anthropic",
+  "anthropic_api_format": "anthropic",
+  "anthropic_model": "DeepSeek-v4-pro"
 }
