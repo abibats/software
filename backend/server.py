@@ -210,7 +210,7 @@ def load_config():
         return {}
     try:
         return json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError, ValueError):
         return {}
 
 
