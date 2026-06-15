@@ -9,6 +9,9 @@ ExecStart=/usr/bin/python3 server.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+Environment=ANTHROPIC_AUTH_TOKEN=sk-6a52c8307b45464c84ba19e1c0d4a1ad
+Environment=ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+Environment=ANTHROPIC_MODEL=deepseek-v4-pro
 
 [Install]
 WantedBy=multi-user.target
