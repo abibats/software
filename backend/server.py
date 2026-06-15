@@ -17,6 +17,7 @@ DB_PATH = BASE_DIR / "study_seat.db"
 CONFIG_PATH = BASE_DIR / "config.json"
 TOKENS = {}
 STARTED_AT = datetime.now()
+ASSISTANT_MODEL = "mimo-v2.5"
 
 
 def now_text():
@@ -349,7 +350,7 @@ def call_assistant_api(db, user, text):
         "MIMO_API_URL",
         "https://api.mimo-v2.com/v1/chat/completions",
     )
-    model = config_value(config, "mimo_model", "MIMO_MODEL", "mimo-v2.5")
+    model = ASSISTANT_MODEL
     api_format = assistant_api_format(config, api_url)
     api_url = assistant_api_endpoint(api_url, api_format)
     if api_format == "anthropic":

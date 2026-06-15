@@ -338,7 +338,7 @@ class StudySeatApiTest(unittest.TestCase):
         # 配置模拟的外部 AI 接口参数
         os.environ["MIMO_API_KEY"] = "test-key"
         os.environ["MIMO_API_URL"] = "https://example.test/chat/completions"
-        os.environ["MIMO_MODEL"] = "mimo-v2.5"
+        os.environ["MIMO_MODEL"] = "deprecated-model"
 
         fake_payload = {
             "choices": [
@@ -356,6 +356,9 @@ class StudySeatApiTest(unittest.TestCase):
         self.assertEqual(payload["source"], "api") # 验证来源为外部 API
         self.assertEqual(payload["reply"], "可以，我已经根据当前座位数据为你筛选。")
         self.assertTrue(mocked_urlopen.called) # 确保 urllib 真的被调用了
+        request = mocked_urlopen.call_args.args[0]
+        body = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(body["model"], "mimo-v2.5")
 
     def test_assistant_uses_config_file_when_present(self):
         """测试系统读取配置文件：应优先读取 config.json 中的 AI 接口配置"""
