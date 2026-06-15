@@ -27,7 +27,7 @@ class ApiClient:
     """
     def __init__(self, base_url):
         self.base_url = base_url
-        self.token = None # 存储登录后获取的 JWT/Auth Token
+        self.token = None  # 存储登录后获取的 JWT/Auth Token
 
     def request(self, method, path, body=None, token=True, query=None):
         """发送 HTTP 请求的核心方法"""
@@ -36,15 +36,15 @@ class ApiClient:
             path = f"{path}?{urlencode(query)}"
         data = None
         headers = {"Content-Type": "application/json"}
-        
+
         # 将字典类型的 body 转换为 JSON 字节流
         if body is not None:
             data = json.dumps(body).encode("utf-8")
-            
+
         # 如果需要鉴权且当前客户端已登录(有token)，则自动携带 Authorization 头部
         if token and self.token:
             headers["Authorization"] = f"Bearer {self.token}"
-            
+
         req = Request(f"{self.base_url}{path}", data=data, headers=headers, method=method)
         try:
             # 发起请求，设置 5 秒超时
@@ -64,7 +64,7 @@ class ApiClient:
             "POST",
             "/api/login",
             {"username": username, "password": password},
-            token=False, # 登录接口本身不需要 Token
+            token=False,  # 登录接口本身不需要 Token
         )
         if status == 200:
             self.token = payload["token"]
@@ -93,7 +93,7 @@ class FakeApiResponse:
 
 class StudySeatApiTest(unittest.TestCase):
     """自习室座位 API 单元测试主类"""
-    
+
     def setUp(self):
         """
         每个测试用例执行前运行。
@@ -106,14 +106,14 @@ class StudySeatApiTest(unittest.TestCase):
         }
         for key in self.original_env:
             os.environ.pop(key, None)
-            
+
         # 2. 创建临时目录用于存放测试数据库和配置文件，避免修改真实数据
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.original_db_path = server.DB_PATH
         self.original_config_path = server.CONFIG_PATH
         server.DB_PATH = Path(self.tmp.name) / "test_study_seat.db"
         server.CONFIG_PATH = Path(self.tmp.name) / "config.json"
-        
+
         # 3. 清理服务器内存中的 Token，并初始化测试数据库表结构
         server.TOKENS.clear()
         server.init_db()
@@ -122,7 +122,7 @@ class StudySeatApiTest(unittest.TestCase):
         self.httpd = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.thread.start()
-        
+
         # 5. 初始化测试客户端，指向刚启动的测试服务器地址
         host, port = self.httpd.server_address
         self.client = ApiClient(f"http://{host}:{port}")
@@ -135,13 +135,13 @@ class StudySeatApiTest(unittest.TestCase):
         self.httpd.shutdown()
         self.httpd.server_close()
         self.thread.join(timeout=5)
-        
+
         # 恢复应用状态和全局变量
         server.DB_PATH = self.original_db_path
         server.CONFIG_PATH = self.original_config_path
         server.TOKENS.clear()
         self.tmp.cleanup()
-        
+
         # 恢复环境变量
         for key, value in self.original_env.items():
             if value is None:
@@ -163,7 +163,7 @@ class StudySeatApiTest(unittest.TestCase):
             "GET", "/api/seats", query={"status": "active"}
         )
         self.assertEqual(status, 200)
-        self.assertGreater(len(payload["seats"]), 0) # 确保数据库初始化时有可用座位
+        self.assertGreater(len(payload["seats"]), 0)  # 确保数据库初始化时有可用座位
         return payload["seats"][0]["id"]
 
     # ================= 测试用例 =================
@@ -254,7 +254,7 @@ class StudySeatApiTest(unittest.TestCase):
         """测试签到限制：未到预约开始时间前禁止提前签到"""
         self.client.login("student1")
         seat_id = self.active_seat_id()
-        start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M") # 预约的是明天
+        start_time = self.future_hour().strftime("%Y-%m-%dT%H:%M")  # 预约的是明天
 
         # 发起预约
         status, _ = self.client.request(
@@ -284,7 +284,7 @@ class StudySeatApiTest(unittest.TestCase):
         # 直接通过数据库插入一条开始时间在 5 分钟前（正在进行中）的预约记录
         start = (now - timedelta(minutes=5)).replace(second=0, microsecond=0)
         end = start + timedelta(hours=2)
-        
+
         db = server.connect()
         db.execute(
             "INSERT INTO reservations(user_id,seat_id,start_time,end_time,status,created_at) VALUES(?,?,?,?,?,?)",
@@ -308,7 +308,7 @@ class StudySeatApiTest(unittest.TestCase):
     def test_admin_can_update_parameters(self):
         """测试超级管理员 (admin) 可以修改系统全局参数（如最大预约时长）"""
         self.client.login("admin")
-        
+
         # 修改参数 max_hours 为 3
         status, payload = self.client.request(
             "PUT", "/api/parameters", {"key": "max_hours", "value": "3"}
@@ -330,7 +330,7 @@ class StudySeatApiTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertIn("reply", payload)
-        self.assertNotEqual(payload.get("source"), "api") # 回复来源不应是外部 API
+        self.assertNotEqual(payload.get("source"), "api")  # 回复来源不应是外部 API
 
     def test_assistant_uses_mimo_api_when_configured(self):
         """测试 AI 助手外部接口对接：配置环境变量后，系统应调用外部 LLM API"""
@@ -345,7 +345,7 @@ class StudySeatApiTest(unittest.TestCase):
                 {"message": {"content": "可以，我已经根据当前座位数据为你筛选。"}}
             ]
         }
-        
+
         # 使用 mock 拦截外部 HTTP 请求，返回我们预设的 fake_payload
         with patch("server.urlopen", return_value=FakeApiResponse(fake_payload)) as mocked_urlopen:
             status, payload = self.client.request(
@@ -353,9 +353,9 @@ class StudySeatApiTest(unittest.TestCase):
             )
 
         self.assertEqual(status, 200)
-        self.assertEqual(payload["source"], "api") # 验证来源为外部 API
+        self.assertEqual(payload["source"], "api")  # 验证来源为外部 API
         self.assertEqual(payload["reply"], "可以，我已经根据当前座位数据为你筛选。")
-        self.assertTrue(mocked_urlopen.called) # 确保 urllib 真的被调用了
+        self.assertTrue(mocked_urlopen.called)  # 确保 urllib 真的被调用了
         request = mocked_urlopen.call_args.args[0]
         body = json.loads(request.data.decode("utf-8"))
         self.assertEqual(body["model"], "mimo-v2.5")
@@ -381,7 +381,7 @@ class StudySeatApiTest(unittest.TestCase):
                 {"message": {"content": "这是从配置文件启用的智能助手回复。"}}
             ]
         }
-        
+
         with patch("server.urlopen", return_value=FakeApiResponse(fake_payload)) as mocked_urlopen:
             status, payload = self.client.request(
                 "POST", "/api/assistant", {"message": "今晚还有空座吗"}
@@ -398,7 +398,7 @@ class StudySeatApiTest(unittest.TestCase):
         """测试对带有 BOM(Byte Order Mark) 的 UTF-8 配置文件的兼容性"""
         server.CONFIG_PATH.write_text(
             json.dumps({"mimo_api_key": "config-key"}),
-            encoding="utf-8-sig", # 强制写入带 BOM 的 UTF-8
+            encoding="utf-8-sig",  # 强制写入带 BOM 的 UTF-8
         )
         # 确保系统能正常读取并判断助手已配置
         self.assertTrue(server.assistant_api_configured())
@@ -411,7 +411,7 @@ class StudySeatApiTest(unittest.TestCase):
                 {
                     "mimo_api_key": "config-key",
                     "mimo_api_url": "https://token-plan-cn.xiaomimimo.com/anthropic",
-                    "mimo_api_format": "anthropic", # 指定格式为 anthropic
+                    "mimo_api_format": "anthropic",  # 指定格式为 anthropic
                     "mimo_model": "mimo-v2.5",
                 }
             ),
@@ -430,13 +430,13 @@ class StudySeatApiTest(unittest.TestCase):
 
         request = mocked_urlopen.call_args.args[0]
         body = json.loads(request.data.decode("utf-8"))
-        
+
         self.assertEqual(status, 200)
         self.assertEqual(payload["source"], "api")
         self.assertEqual(payload["reply"], "Anthropic 兼容接口已经返回。")
         self.assertEqual(
             request.full_url,
-            "https://token-plan-cn.xiaomimimo.com/anthropic/v1/messages", # 验证自动补充了 API 路径
+            "https://token-plan-cn.xiaomimimo.com/anthropic/v1/messages",  # 验证自动补充了 API 路径
         )
         # 验证 Anthropic 特有的请求体参数是否正确构建
         self.assertEqual(body["max_tokens"], 600)
@@ -640,7 +640,7 @@ class StudySeatApiTest(unittest.TestCase):
         stats = payload["stats"]
         self.assertIn("my_reserved", stats)
         self.assertIn("my_checked_in", stats)
-        self.assertNotIn("violations", stats) # 不应看到全校的违规总计
+        self.assertNotIn("violations", stats)  # 不应看到全校的违规总计
 
         # 管理员可以看到全局统计数据
         admin = ApiClient(self.client.base_url)
