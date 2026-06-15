@@ -1,6 +1,6 @@
 {
-  "anthropic_auth_token": "replace-with-your-deepseek-api-key",
+  "anthropic_api_key": "replace-with-your-deepseek-api-key",
   "anthropic_base_url": "https://api.deepseek.com/anthropic",
   "anthropic_api_format": "anthropic",
-  "anthropic_model": "DeepSeek-v4-pro"
+  "anthropic_model": "deepseek-v4-pro"
 }

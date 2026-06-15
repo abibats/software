@@ -196,12 +196,12 @@ cp backend/config.example.json backend/config.json
 
 ```json
 {
-  "anthropic_auth_token": "你的 DeepSeek API Key",
+  "anthropic_api_key": "你的 DeepSeek API Key",
   "anthropic_base_url": "https://api.deepseek.com/anthropic",
   "anthropic_api_format": "anthropic",
-  "anthropic_model": "DeepSeek-v4-pro"
+  "anthropic_model": "deepseek-v4-pro"
 }
 ```
 
-`backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_BASE_URL`、`ANTHROPIC_API_FORMAT`、`ANTHROPIC_MODEL` 环境变量。
+`backend/config.json` 已加入 `.gitignore`，不会提交到 GitHub。服务器上可以直接保留这个文件；如果没有配置文件，也可以继续使用 `ANTHROPIC_API_KEY`、`ANTHROPIC_AUTH_TOKEN`、`ANTHROPIC_BASE_URL`、`ANTHROPIC_API_FORMAT`、`ANTHROPIC_MODEL` 环境变量。
 

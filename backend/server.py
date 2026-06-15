@@ -18,7 +18,7 @@ CONFIG_PATH = BASE_DIR / "config.json"
 TOKENS = {}
 STARTED_AT = datetime.now()
 ASSISTANT_API_URL = "https://api.deepseek.com/anthropic"
-ASSISTANT_MODEL = "DeepSeek-v4-pro"
+ASSISTANT_MODEL = "deepseek-v4-pro"
 
 
 def now_text():
@@ -238,7 +238,8 @@ def assistant_api_endpoint(api_url, api_format):
 def assistant_api_configured():
     config = load_config()
     return bool(
-        config_value(config, "anthropic_auth_token", "ANTHROPIC_AUTH_TOKEN")
+        config_value(config, "anthropic_api_key", "ANTHROPIC_API_KEY")
+        or config_value(config, "anthropic_auth_token", "ANTHROPIC_AUTH_TOKEN")
         or os.environ.get("AI_API_KEY")
     )
 
@@ -346,7 +347,8 @@ def build_context_text(db, user, text):
 def call_assistant_api(db, user, text):
     config = load_config()
     api_key = (
-        config_value(config, "anthropic_auth_token", "ANTHROPIC_AUTH_TOKEN")
+        config_value(config, "anthropic_api_key", "ANTHROPIC_API_KEY")
+        or config_value(config, "anthropic_auth_token", "ANTHROPIC_AUTH_TOKEN")
         or os.environ.get("AI_API_KEY")
     )
     if not api_key:

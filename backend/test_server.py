@@ -106,6 +106,7 @@ class StudySeatApiTest(unittest.TestCase):
                 "MIMO_API_KEY",
                 "MIMO_API_URL",
                 "MIMO_MODEL",
+                "ANTHROPIC_API_KEY",
                 "ANTHROPIC_AUTH_TOKEN",
                 "ANTHROPIC_BASE_URL",
                 "ANTHROPIC_MODEL",
@@ -344,9 +345,9 @@ class StudySeatApiTest(unittest.TestCase):
         """测试 AI 助手外部接口对接：配置环境变量后，系统应调用外部 LLM API"""
         self.client.login("student1")
         # 配置模拟的外部 AI 接口参数
-        os.environ["ANTHROPIC_AUTH_TOKEN"] = "test-key"
+        os.environ["ANTHROPIC_API_KEY"] = "test-key"
         os.environ["ANTHROPIC_BASE_URL"] = "https://example.test/anthropic"
-        os.environ["ANTHROPIC_MODEL"] = "DeepSeek-v4-pro"
+        os.environ["ANTHROPIC_MODEL"] = "deepseek-v4-pro"
 
         fake_payload = {
             "content": [
@@ -367,7 +368,7 @@ class StudySeatApiTest(unittest.TestCase):
         request = mocked_urlopen.call_args.args[0]
         body = json.loads(request.data.decode("utf-8"))
         self.assertEqual(request.full_url, "https://example.test/anthropic/v1/messages")
-        self.assertEqual(body["model"], "DeepSeek-v4-pro")
+        self.assertEqual(body["model"], "deepseek-v4-pro")
 
     def test_assistant_uses_config_file_when_present(self):
         """测试系统读取配置文件：应优先读取 config.json 中的 AI 接口配置"""
@@ -376,10 +377,10 @@ class StudySeatApiTest(unittest.TestCase):
         server.CONFIG_PATH.write_text(
             json.dumps(
                 {
-                    "anthropic_auth_token": "config-key",
+                    "anthropic_api_key": "config-key",
                     "anthropic_base_url": "https://example.test/from-config",
                     "anthropic_api_format": "openai",
-                    "anthropic_model": "DeepSeek-v4-pro",
+                    "anthropic_model": "deepseek-v4-pro",
                 }
             ),
             encoding="utf-8",
@@ -406,7 +407,7 @@ class StudySeatApiTest(unittest.TestCase):
     def test_config_file_allows_utf8_bom(self):
         """测试对带有 BOM(Byte Order Mark) 的 UTF-8 配置文件的兼容性"""
         server.CONFIG_PATH.write_text(
-            json.dumps({"anthropic_auth_token": "config-key"}),
+            json.dumps({"anthropic_api_key": "config-key"}),
             encoding="utf-8-sig",  # 强制写入带 BOM 的 UTF-8
         )
         # 确保系统能正常读取并判断助手已配置
@@ -418,10 +419,10 @@ class StudySeatApiTest(unittest.TestCase):
         server.CONFIG_PATH.write_text(
             json.dumps(
                 {
-                    "anthropic_auth_token": "config-key",
+                    "anthropic_api_key": "config-key",
                     "anthropic_base_url": "https://api.deepseek.com/anthropic",
                     "anthropic_api_format": "anthropic",  # 指定格式为 anthropic
-                    "anthropic_model": "DeepSeek-v4-pro",
+                    "anthropic_model": "deepseek-v4-pro",
                 }
             ),
             encoding="utf-8",
@@ -450,7 +451,7 @@ class StudySeatApiTest(unittest.TestCase):
         # 验证 Anthropic 特有的请求体参数是否正确构建
         self.assertEqual(body["max_tokens"], 600)
         self.assertIn("system", body)
-        self.assertEqual(body["model"], "DeepSeek-v4-pro")
+        self.assertEqual(body["model"], "deepseek-v4-pro")
 
     def test_cancel_reservation(self):
         """测试取消预约功能（将预约状态变更为 cancelled）"""

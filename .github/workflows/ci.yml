@@ -99,22 +99,24 @@ jobs:
         if: steps.check.outputs.configured == 'true'
         uses: appleboy/ssh-action@v1
         env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: ANTHROPIC_AUTH_TOKEN
+          envs: ANTHROPIC_API_KEY,ANTHROPIC_AUTH_TOKEN
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin main
-            if [ -n "$ANTHROPIC_AUTH_TOKEN" ]; then
+            DEEPSEEK_API_KEY="${ANTHROPIC_API_KEY:-$ANTHROPIC_AUTH_TOKEN}"
+            if [ -n "$DEEPSEEK_API_KEY" ]; then
               cat > backend/config.json <<EOF
             {
-              "anthropic_auth_token": "$ANTHROPIC_AUTH_TOKEN",
+              "anthropic_api_key": "$DEEPSEEK_API_KEY",
               "anthropic_base_url": "https://api.deepseek.com/anthropic",
               "anthropic_api_format": "anthropic",
-              "anthropic_model": "DeepSeek-v4-pro"
+              "anthropic_model": "deepseek-v4-pro"
             }
             EOF
             fi
